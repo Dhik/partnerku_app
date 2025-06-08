@@ -307,7 +307,24 @@ return [
                 PermissionEnum::ViewOtherSpent,
             ],
         ],
-        
+        [
+            'text' => 'Income',
+            'url' => 'admin/income',
+            'icon' => 'nav-icon far fa-circle text-info',
+            'can' => [PermissionEnum::ViewIncome],
+        ],
+        [
+            'text' => 'Payroll',
+            'url' => 'admin/payroll',
+            'icon' => 'nav-icon far fa-circle text-info',
+            'can' => [PermissionEnum::ViewPayroll],
+        ],
+        [
+            'text' => 'Other Spent',
+            'url' => 'admin/other_spent',
+            'icon' => 'nav-icon far fa-circle text-info',
+            'can' => [PermissionEnum::ViewOtherSpent],
+        ],
         [
             'text'    => 'Master Data',
             'icon'    => 'fas fa-fw fa-database',
