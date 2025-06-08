@@ -311,19 +311,19 @@ return [
             'text' => 'Income',
             'url' => 'admin/income',
             'icon' => 'nav-icon far fa-circle text-info',
-            'can' => [PermissionEnum::ViewIncome],
+            'can' => [PermissionEnum::ViewUser],
         ],
         [
             'text' => 'Payroll',
             'url' => 'admin/payroll',
             'icon' => 'nav-icon far fa-circle text-info',
-            'can' => [PermissionEnum::ViewPayroll],
+            'can' => [PermissionEnum::ViewUser],
         ],
         [
             'text' => 'Other Spent',
             'url' => 'admin/other_spent',
             'icon' => 'nav-icon far fa-circle text-info',
-            'can' => [PermissionEnum::ViewOtherSpent],
+            'can' => [PermissionEnum::ViewUser],
         ],
         [
             'text'    => 'Master Data',
