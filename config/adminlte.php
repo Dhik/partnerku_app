@@ -302,10 +302,9 @@ return [
         [
             'header' => 'DASHBOARD',
             'can' => [
-                PermissionEnum::ViewSales,
-                PermissionEnum::ViewOrder,
-                PermissionEnum::ViewMarketing,
-                PermissionEnum::ViewCustomer,
+                PermissionEnum::ViewIncome,
+                PermissionEnum::ViewResult,
+                PermissionEnum::ViewOtherSpent,
             ],
         ],
         
@@ -313,9 +312,6 @@ return [
             'text'    => 'Master Data',
             'icon'    => 'fas fa-fw fa-database',
             'can' => [PermissionEnum::ViewUser,
-                PermissionEnum::ViewMarketingCategory,
-                PermissionEnum::ViewSalesChannel,
-                PermissionEnum::ViewSocialMedia,
             ],
             'submenu' => [
                 [

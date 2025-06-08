@@ -56,4 +56,10 @@ enum PermissionEnum
     const CreateCampaignContent = 'create campaign content';
     const UpdateCampaignContent = 'update campaign content';
     const DeleteCampaignContent = 'delete campaign content';
+
+    // Campaign 
+    const ViewCampaign = 'view campaign';
+    const CreateCampaign = 'create campaign';
+    const UpdateCampaign = 'update campaign';
+    const DeleteCampaign = 'delete campaign';
 }
