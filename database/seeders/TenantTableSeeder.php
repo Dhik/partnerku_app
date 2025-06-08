@@ -9,7 +9,7 @@ class TenantTableSeeder extends Seeder
 {
     public function run(): void
     {
-        Tenant::updateOrCreate(['name' => 'Cleora Beauty']);
-        Tenant::updateOrCreate(['name' => 'Azrina Beauty']);
+        Tenant::updateOrCreate(['name' => 'Microsoft']);
+        Tenant::updateOrCreate(['name' => 'Google']);
     }
 }

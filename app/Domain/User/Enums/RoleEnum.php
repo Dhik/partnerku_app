@@ -6,25 +6,22 @@ enum RoleEnum: string
 {
     const SuperAdmin = 'superadmin';
 
-    const Marketing = 'marketing';
+    const Client1 = 'client_1';
 
-    const Finance = 'finance';
+    const Client2 = 'client_2';
 
-    const HR = 'hr';
+    const TimInternal = 'tim_internal';
 
-    const BrandManager = 'brand manager';
-
-    const Staff = 'staff';
+    const TimAds = 'tim_ads';
 
     public static function getDescription($value): string
     {
         return match ($value) {
             self::SuperAdmin => 'SuperAdmin',
-            self::BrandManager => 'Brand Manager',
-            self::Marketing => 'Marketing',
-            self::Finance => 'Finance',
-            self::HR => 'HR',
-            self::Staff => 'Staff',
+            self::Client1 => 'Client 1',
+            self::Client2 => 'Client 2',
+            self::TimInternal => 'Tim Internal',
+            self::TimAds => 'Tim Ads',
             default => 'Unknown'
         };
     }
