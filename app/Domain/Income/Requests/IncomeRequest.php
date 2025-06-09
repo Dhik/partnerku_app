@@ -24,10 +24,10 @@ class IncomeRequest extends FormRequest
     public function rules()
     {
         return [
-            'nama_client' => 'required|string|max:255',
-            'revenue_contract' => 'required|numeric|min:0',
-            'service' => 'required|string|max:255',
-            'team_in_charge' => 'required|string'
+            'nama_client' => 'nullable|string|max:255',
+            'revenue_contract' => 'nullable|numeric|min:0',
+            'service' => 'nullable|string|max:255',
+            'team_in_charge' => 'nullable|string'
         ];
     }
 
@@ -46,7 +46,11 @@ class IncomeRequest extends FormRequest
             'revenue_contract.min' => 'Revenue contract must be at least 0',
             'service.required' => 'Service is required',
             'service.max' => 'Service must not exceed 255 characters',
-            'team_in_charge.required' => 'Team in charge is required'
+            'team_in_charge.required' => 'Team in charge is required',
+            'team_in_charge.array' => 'Team in charge must be an array',
+            'team_in_charge.min' => 'At least one team member must be selected',
+            'team_in_charge.*.integer' => 'Team member ID must be an integer',
+            'team_in_charge.*.exists' => 'Selected team member does not exist'
         ];
     }
 }

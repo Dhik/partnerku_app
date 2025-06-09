@@ -17,6 +17,6 @@ class Income extends Model
 
     protected $casts = [
         'revenue_contract' => 'decimal:2',
-        'team_in_charge' => 'string'  // Explicitly cast as string
+        'team_in_charge' => 'json'  // Cast as JSON to handle array data
     ];
 }

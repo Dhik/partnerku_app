@@ -29,6 +29,16 @@ class IncomeController extends Controller
     }
 
     /**
+     * Get users for dropdown
+     */
+    public function getUsers()
+    {
+        // Assuming you have a User model, adjust the query as needed
+        $users = \App\Models\User::select('id', 'name')->get();
+        return response()->json($users);
+    }
+
+    /**
      * Get data for DataTable
      */
     public function data()
@@ -51,6 +61,15 @@ class IncomeController extends Controller
             ->editColumn('revenue_contract', function ($income) {
                 return 'Rp ' . number_format($income->revenue_contract, 2, ',', '.');
             })
+            ->editColumn('team_in_charge', function ($income) {
+                // Display team members as comma-separated names
+                if (is_array($income->team_in_charge)) {
+                    $userIds = $income->team_in_charge;
+                    $users = \App\Models\User::whereIn('id', $userIds)->pluck('name')->toArray();
+                    return implode(', ', $users);
+                }
+                return $income->team_in_charge;
+            })
             ->rawColumns(['actions'])
             ->make(true);
     }
@@ -69,19 +88,31 @@ class IncomeController extends Controller
     public function store(IncomeRequest $request)
     {
         try {
-            $data = $request->validated();
+            $validatedData = $request->validated();
             
-            // Ensure team_in_charge is stored as string
-            if (isset($data['team_in_charge'])) {
-                $data['team_in_charge'] = (string) $data['team_in_charge'];
+            // Convert team_in_charge array to JSON if it's an array
+            if (isset($validatedData['team_in_charge']) && is_array($validatedData['team_in_charge'])) {
+                $validatedData['team_in_charge'] = $validatedData['team_in_charge'];
+            } elseif (isset($validatedData['team_in_charge'])) {
+                // If it's a single value, convert to array
+                $validatedData['team_in_charge'] = [$validatedData['team_in_charge']];
             }
             
-            Income::create($data);
+            // Debug: Log the data being saved
+            \Log::info('Income data to be saved:', $validatedData);
+            
+            Income::create($validatedData);
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Income created successfully!'
             ]);
         } catch (\Exception $e) {
+            \Log::error('Income creation error:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error creating income: ' . $e->getMessage()
@@ -94,6 +125,14 @@ class IncomeController extends Controller
      */
     public function show(Income $income)
     {
+        // Get user names for team_in_charge display
+        $teamMembers = [];
+        if (is_array($income->team_in_charge)) {
+            $teamMembers = \App\Models\User::whereIn('id', $income->team_in_charge)->pluck('name')->toArray();
+        }
+        
+        $income->team_members_names = $teamMembers;
+        
         return response()->json([
             'success' => true,
             'data' => $income
@@ -117,19 +156,31 @@ class IncomeController extends Controller
     public function update(IncomeRequest $request, Income $income)
     {
         try {
-            $data = $request->validated();
+            $validatedData = $request->validated();
             
-            // Ensure team_in_charge is stored as string
-            if (isset($data['team_in_charge'])) {
-                $data['team_in_charge'] = (string) $data['team_in_charge'];
+            // Convert team_in_charge array to JSON if it's an array
+            if (isset($validatedData['team_in_charge']) && is_array($validatedData['team_in_charge'])) {
+                $validatedData['team_in_charge'] = $validatedData['team_in_charge'];
+            } elseif (isset($validatedData['team_in_charge'])) {
+                // If it's a single value, convert to array
+                $validatedData['team_in_charge'] = [$validatedData['team_in_charge']];
             }
             
-            $income->update($data);
+            // Debug: Log the data being updated
+            \Log::info('Income data to be updated:', $validatedData);
+            
+            $income->update($validatedData);
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Income updated successfully!'
             ]);
         } catch (\Exception $e) {
+            \Log::error('Income update error:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error updating income: ' . $e->getMessage()

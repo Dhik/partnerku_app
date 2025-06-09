@@ -12,7 +12,8 @@ use App\Domain\Payroll\Controllers\PayrollController;
 Route::prefix('admin')
     ->middleware('auth')
         ->group(function () {
-            Route::prefix('payroll')->group(function () {
+            Route::prefix('payroll')
+            ->group(function () {
                 Route::get('/', [PayrollController::class, 'index'])->name('payroll.index');
                 Route::get('/data', [PayrollController::class, 'data'])->name('payroll.data');
                 Route::get('/create', [PayrollController::class, 'create'])->name('payroll.create');

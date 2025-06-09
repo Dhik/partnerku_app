@@ -64,7 +64,10 @@
                     </div>
                     <div class="form-group">
                         <label for="team_in_charge">Team In Charge</label>
-                        <textarea class="form-control" id="team_in_charge" name="team_in_charge" rows="3" required></textarea>
+                        <select class="form-control" id="team_in_charge" name="team_in_charge[]" multiple required>
+                            <!-- Options will be loaded via AJAX -->
+                        </select>
+                        <small class="form-text text-muted">Hold Ctrl (or Cmd on Mac) to select multiple team members</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -127,6 +130,9 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
 <script>
 $(document).ready(function() {
+    // Load users for dropdown
+    loadUsers();
+    
     // Initialize DataTable
     $('#incomeTable').DataTable({
         processing: true,
@@ -145,22 +151,35 @@ $(document).ready(function() {
     // Form submission
     $('#incomeForm').on('submit', function(e) {
         e.preventDefault();
-        let formData = new FormData(this);
+        
+        // Get selected team members as array
+        let selectedTeam = $('#team_in_charge').val();
+        
+        // Get form data as object
+        let formData = {
+            'nama_client': $('#nama_client').val(),
+            'revenue_contract': $('#revenue_contract').val(),
+            'service': $('#service').val(),
+            'team_in_charge': selectedTeam, // This will be an array
+            '_token': '{{ csrf_token() }}'
+        };
+        
         let incomeId = $('#incomeId').val();
         let url = incomeId ? '{{ route("income.update", ":id") }}'.replace(':id', incomeId) : '{{ route("income.store") }}';
         let method = incomeId ? 'PUT' : 'POST';
 
         if (method === 'PUT') {
-            formData.append('_method', 'PUT');
+            formData['_method'] = 'PUT';
         }
+
+        console.log('Submitting data:', formData); // Debug log
 
         $.ajax({
             url: url,
             method: 'POST',
             data: formData,
-            processData: false,
-            contentType: false,
             success: function(response) {
+                console.log('Success response:', response); // Debug log
                 if (response.success) {
                     $('#incomeModal').modal('hide');
                     $('#incomeTable').DataTable().ajax.reload();
@@ -175,11 +194,29 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
+                console.log('Error response:', xhr.responseJSON); // Debug log
                 handleFormErrors(xhr);
             }
         });
     });
 });
+
+function loadUsers() {
+    $.ajax({
+        url: '{{ route("income.users") }}',
+        method: 'GET',
+        success: function(users) {
+            let options = '';
+            users.forEach(function(user) {
+                options += `<option value="${user.id}">${user.name}</option>`;
+            });
+            $('#team_in_charge').html(options);
+        },
+        error: function() {
+            console.log('Error loading users');
+        }
+    });
+}
 
 function createIncome() {
     resetForm();
@@ -198,7 +235,12 @@ function editIncome(id) {
                 $('#nama_client').val(data.nama_client);
                 $('#revenue_contract').val(data.revenue_contract);
                 $('#service').val(data.service);
-                $('#team_in_charge').val(data.team_in_charge);
+                
+                // Set selected team members
+                if (Array.isArray(data.team_in_charge)) {
+                    $('#team_in_charge').val(data.team_in_charge);
+                }
+                
                 $('#incomeModalLabel').text('Edit Income');
                 $('#incomeModal').modal('show');
             }
@@ -216,7 +258,14 @@ function showIncome(id) {
                 $('#show_nama_client').text(data.nama_client);
                 $('#show_revenue_contract').text('Rp ' + new Intl.NumberFormat('id-ID').format(data.revenue_contract));
                 $('#show_service').text(data.service);
-                $('#show_team_in_charge').text(data.team_in_charge);
+                
+                // Display team members names
+                if (data.team_members_names && data.team_members_names.length > 0) {
+                    $('#show_team_in_charge').text(data.team_members_names.join(', '));
+                } else {
+                    $('#show_team_in_charge').text('No team assigned');
+                }
+                
                 $('#showIncomeModal').modal('show');
             }
         }
@@ -266,6 +315,58 @@ function deleteIncome(id) {
 
 function resetForm() {
     $('#incomeForm')[0].reset();
+    $('#incomeId').val('');
+    $('#team_in_charge').val([]).trigger('change');
+}
+
+function handleFormErrors(xhr) {
+    let errors = xhr.responseJSON.errors;
+    if (errors) {
+        let errorMessage = '';
+        Object.keys(errors).forEach(function(key) {
+            errorMessage += errors[key][0] + '\n';
+        });
+        Swal.fire({
+            icon: 'error',
+            title: 'Validation Error!',
+            text: errorMessage
+        });
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: xhr.responseJSON.message || 'Something went wrong!'
+        });
+    }
+}
+</script>
+@stop();
+    $('#incomeId').val('');
+    $('#team_in_charge').val([]).trigger('change');
+}
+
+function handleFormErrors(xhr) {
+    let errors = xhr.responseJSON.errors;
+    if (errors) {
+        let errorMessage = '';
+        Object.keys(errors).forEach(function(key) {
+            errorMessage += errors[key][0] + '\n';
+        });
+        Swal.fire({
+            icon: 'error',
+            title: 'Validation Error!',
+            text: errorMessage
+        });
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: xhr.responseJSON.message || 'Something went wrong!'
+        });
+    }
+}
+</script>
+@stop();
     $('#incomeId').val('');
 }
 
