@@ -172,9 +172,7 @@ class CampaignController extends Controller
     public function create(): View|\Illuminate\Foundation\Application|Factory|Application
     {
         $this->authorize('createCampaign', Campaign::class);
-        $budgets = Budget::all();
-
-        return view('admin.campaign.create', compact('budgets'));
+        return view('admin.campaign.create');
     }
 
     /**

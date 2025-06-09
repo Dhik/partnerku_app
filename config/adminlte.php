@@ -326,6 +326,23 @@ return [
             'can' => [PermissionEnum::ViewUser],
         ],
         [
+            'text' => 'Campaign',
+            'can' => [
+                PermissionEnum::ViewCampaign,
+                PermissionEnum::ViewKOL
+            ],
+            'icon'    => 'fas fa-fw fa-map',
+            'submenu' => [
+                [
+                    'text' => 'Campaign',
+                    'url' => 'admin/campaign',
+                    'icon' => 'nav-icon far fa-circle',
+                    'can' => [PermissionEnum::ViewCampaign],
+                    'active' => ['admin/campaign*']
+                ],
+            ]
+        ],
+        [
             'text'    => 'Master Data',
             'icon'    => 'fas fa-fw fa-database',
             'can' => [PermissionEnum::ViewUser,

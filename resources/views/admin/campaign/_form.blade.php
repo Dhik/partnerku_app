@@ -24,32 +24,6 @@
     </div>
 </div>
 
-<div class="form-group row">
-    <label for="id_budget" class="col-md-3 col-form-label text-md-right">
-        {{ trans('labels.budget') }}<span class="required">*</span>
-    </label>
-
-    <div class="col-md-6">
-        <select
-            id="id_budget"
-            class="form-control @error('id_budget') is-invalid @enderror"
-            name="id_budget"
-            autofocus>
-            <option value="">{{ trans('placeholder.select', ['field' => trans('labels.budget')]) }}</option>
-            @foreach($budgets as $budget)
-                <option value="{{ $budget->id }}" {{ old('id_budget', $edit ? $campaign->id_budget : '') == $budget->id ? 'selected' : '' }}>
-                    {{ $budget->nama_budget }} (Rp. {{ number_format($budget->budget, 0, ',', '.') }})
-                </option>
-            @endforeach
-        </select>
-
-        @error('id_budget')
-            <span class="invalid-feedback" role="alert">
-                <strong>{{ $message }}</strong>
-            </span>
-        @enderror
-    </div>
-</div>
 
 
 <div class="form-group row">
