@@ -9,7 +9,7 @@ use App\Domain\OtherSpent\Controllers\OtherSpentController;
 |--------------------------------------------------------------------------
 */
 Route::prefix('admin')
-    // ->middleware('auth')
+    ->middleware('auth')
         ->group(function () {
             Route::prefix('other_spent')->group(function () {
                 Route::get('/', [OtherSpentController::class, 'index'])->name('otherSpent.index');

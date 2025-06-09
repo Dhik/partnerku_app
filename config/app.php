@@ -174,6 +174,9 @@ return [
         */
         App\Domain\Campaign\Providers\CampaignProvider::class,
         App\Domain\Tenant\Providers\TenantProvider::class,
+        App\Domain\Income\Providers\IncomeProvider::class,
+        App\Domain\OtherSpent\Providers\OtherSpentProvider::class,
+        App\Domain\Payroll\Providers\PayrollProvider::class,
         App\Domain\User\Providers\UserProvider::class,
     ])->toArray(),
 
