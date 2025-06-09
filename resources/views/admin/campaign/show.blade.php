@@ -221,41 +221,6 @@
             }
         }
 
-        let offerTable = $('#offerTable').DataTable({
-            responsive: true,
-            processing: true,
-            serverSide: true,
-            pageLength: 25,
-            ajax: {
-                url: "{{ route('offer.getByCampaignId', ['campaignId' => ':campaignId']) }}".replace(':campaignId', campaignId),
-                data: function (d) {
-                    d.status = filterStatus.val();
-                }
-            },
-            columns: [
-                {data: 'created_at', name: 'created_at'},
-                {data: 'id', name: 'id'},
-                {data: 'created_by_name', name: 'createdBy.name'},
-                {data: 'key_opinion_leader_username', name: 'username'},
-                {data: 'rate_formatted', name: 'rate_per_slot'},
-                {data: 'key_opinion_leader_cpm', name: 'keyOpinionLeader.cpm'},
-                {data: 'key_opinion_leader_average_view', name: 'keyOpinionLeader.average_view'},
-                {data: 'benefit', name: 'benefit'},
-                {data: 'negotiate', name: 'negotiate'},
-                {data: 'acc_slot', name: 'acc_slot'},
-                {data: 'status_label', name: 'status'},
-                {data: 'actions', sortable: false, orderable: false}
-            ],
-            columnDefs: [
-                { "targets": [0, 1], "visible": false },
-                { "targets": [4, 5, 6, 9], "className": "text-right" },
-                { "targets": [10, 11], "className": "text-center" },
-            ],
-            order: [[0, 'desc']]
-        });
-
-        
-
         contentTable.on('draw.dt', function() {
             $('[data-toggle="tooltip"]').tooltip();
         });
