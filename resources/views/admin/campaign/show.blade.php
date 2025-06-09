@@ -105,7 +105,6 @@
             $('#filterProduct').val('').trigger('change'); 
 
             contentTable.ajax.reload();
-            offerTable.ajax.reload();
 
             updateCard(); 
             initChart(); 
