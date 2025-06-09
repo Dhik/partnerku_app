@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class OtherSpent extends Model
 {
+    protected $table = 'other_spent';
+    
     protected $fillable = [
         'date',
         'detail',
