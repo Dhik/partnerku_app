@@ -1,5 +1,5 @@
-<!-- Modal -->
-<div class="modal fade" id="contentUpdateModal" role="dialog" aria-labelledby="contentUpdateModal" aria-hidden="true">
+{{-- modal-update-content.blade.php --}}
+<div class="modal fade" id="contentUpdateModal" tabindex="-1" role="dialog" aria-labelledby="contentUpdateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -11,7 +11,6 @@
             <div class="modal-body">
                 <form id="contentUpdateForm">
                     @csrf
-                    <!-- Your form fields here -->
                     <div class="form-group">
                         <label for="usernameUpdate">{{ trans('labels.influencer') }}<span class="required">*</span></label>
                         <input type="text" class="form-control" id="usernameUpdate" readonly>
@@ -31,7 +30,7 @@
                         <label for="platformUpdate">{{ trans('labels.platform') }}<span class="required">*</span></label>
                         <select class="form-control" id="platformUpdate" name="channel" required>
                             @foreach($platforms as $platform)
-                                <option value={{ $platform['value'] }}>
+                                <option value="{{ $platform['value'] }}">
                                     {{ $platform['label'] }}
                                 </option>
                             @endforeach
@@ -58,7 +57,6 @@
                         <input type="text" class="form-control" id="adsCodeUpdate" name="kode_ads" placeholder="{{ trans('placeholder.input', ['field' => trans('labels.kode_ads')]) }}">
                     </div>
 
-                    <!-- New fields for views, likes, and comments -->
                     <div class="form-group">
                         <label for="viewsUpdate">{{ trans('labels.views') }}</label>
                         <input type="number" class="form-control" id="viewsUpdate" name="views" placeholder="{{ trans('placeholder.input', ['field' => trans('labels.views')]) }}">
@@ -77,11 +75,13 @@
                     <input type="hidden" id="contentId">
 
                     <div class="form-group d-none" id="errorContentUpdate"></div>
-
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> {{ trans('buttons.update') }}
-                    </button>
                 </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="submit" form="contentUpdateForm" class="btn btn-primary">
+                    <i class="fas fa-save"></i> {{ trans('buttons.update') }}
+                </button>
             </div>
         </div>
     </div>

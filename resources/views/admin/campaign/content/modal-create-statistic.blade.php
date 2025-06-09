@@ -1,9 +1,9 @@
-<!-- Modal -->
-<div class="modal fade" id="statisticModal" role="dialog" aria-labelledby="statisticModal" aria-hidden="true">
+{{-- modal-create-statistic.blade.php --}}
+<div class="modal fade" id="statisticModal" tabindex="-1" role="dialog" aria-labelledby="statisticModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="contentModalLabel">{{ trans('labels.add') }} {{ trans('labels.data') }}</h5>
+                <h5 class="modal-title" id="statisticModalLabel">{{ trans('labels.add') }} {{ trans('labels.data') }}</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -11,7 +11,6 @@
             <div class="modal-body">
                 <form id="statisticForm">
                     @csrf
-
                     <div class="form-group">
                         <label for="date">{{ trans('labels.date') }}</label>
                         <input type="text" class="form-control" id="date" name="view" readonly value="{{ \Carbon\Carbon::now()->format('d M Y') }}">
@@ -35,13 +34,14 @@
                     <input type="hidden" id="statisticContentId">
 
                     <div class="form-group d-none" id="errorStatistic"></div>
-
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> {{ trans('buttons.save') }}
-                    </button>
                 </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="submit" form="statisticForm" class="btn btn-primary">
+                    <i class="fas fa-save"></i> {{ trans('buttons.save') }}
+                </button>
             </div>
         </div>
     </div>
 </div>
-

@@ -1,5 +1,5 @@
-<!-- Modal -->
-<div class="modal fade" id="contentModal" role="dialog" aria-labelledby="contentModal" aria-hidden="true">
+{{-- modal-create-content.blade.php --}}
+<div class="modal fade" id="contentModal" tabindex="-1" role="dialog" aria-labelledby="contentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -11,7 +11,6 @@
             <div class="modal-body">
                 <form id="contentForm">
                     @csrf
-                    <!-- Your form fields here -->
                     <div class="form-group">
                         <label for="username">{{ trans('labels.influencer') }}<span class="required">*</span></label>
                         <input type="text" class="form-control" name="username" placeholder="{{ trans('placeholder.input', ['field' => trans('labels.influencer')]) }}">
@@ -31,7 +30,7 @@
                         <label for="platform">{{ trans('labels.platform') }}<span class="required">*</span></label>
                         <select class="form-control" id="platform" name="channel" required>
                             @foreach($platforms as $platform)
-                                <option value={{ $platform['value'] }}>
+                                <option value="{{ $platform['value'] }}">
                                     {{ $platform['label'] }}
                                 </option>
                             @endforeach
@@ -59,14 +58,15 @@
                     </div>
 
                     <div class="form-group d-none" id="errorContent"></div>
-
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                        <i class="fas fa-save"></i> {{ trans('buttons.save') }}
-                    </button>
                 </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="submit" form="contentForm" class="btn btn-primary">
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    <i class="fas fa-save"></i> {{ trans('buttons.save') }}
+                </button>
             </div>
         </div>
     </div>
 </div>
-
