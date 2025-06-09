@@ -69,7 +69,14 @@ class IncomeController extends Controller
     public function store(IncomeRequest $request)
     {
         try {
-            Income::create($request->validated());
+            $data = $request->validated();
+            
+            // Ensure team_in_charge is stored as string
+            if (isset($data['team_in_charge'])) {
+                $data['team_in_charge'] = (string) $data['team_in_charge'];
+            }
+            
+            Income::create($data);
             return response()->json([
                 'success' => true,
                 'message' => 'Income created successfully!'
@@ -110,7 +117,14 @@ class IncomeController extends Controller
     public function update(IncomeRequest $request, Income $income)
     {
         try {
-            $income->update($request->validated());
+            $data = $request->validated();
+            
+            // Ensure team_in_charge is stored as string
+            if (isset($data['team_in_charge'])) {
+                $data['team_in_charge'] = (string) $data['team_in_charge'];
+            }
+            
+            $income->update($data);
             return response()->json([
                 'success' => true,
                 'message' => 'Income updated successfully!'

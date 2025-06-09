@@ -16,6 +16,7 @@ class Income extends Model
     ];
 
     protected $casts = [
-        'revenue_contract' => 'decimal:2'
+        'revenue_contract' => 'decimal:2',
+        'team_in_charge' => 'string'  // Explicitly cast as string
     ];
 }
