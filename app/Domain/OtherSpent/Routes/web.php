@@ -11,7 +11,7 @@ use App\Domain\OtherSpent\Controllers\OtherSpentController;
 Route::prefix('admin')
     ->middleware('auth')
         ->group(function () {
-            Route::prefix('otherSpent')->group(function () {
+            Route::prefix('other_spent')->group(function () {
                 Route::get('/', [OtherSpentController::class, 'index'])->name('otherSpent.index');
                 Route::get('/data', [OtherSpentController::class, 'data'])->name('otherSpent.data');
                 Route::get('/create', [OtherSpentController::class, 'create'])->name('otherSpent.create');
