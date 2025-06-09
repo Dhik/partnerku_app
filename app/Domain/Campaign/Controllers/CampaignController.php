@@ -197,15 +197,13 @@ class CampaignController extends Controller
      */
     public function show(Campaign $campaign): View|\Illuminate\Foundation\Application|Factory|Application
     {
-        $negotiates = OfferEnum::Negotiation;
-        $statuses = OfferEnum::Status;
         $platforms = CampaignContentEnum::Platform;
 
         $usernames = CampaignContent::where('tenant_id', Auth::user()->current_tenant_id)
             ->distinct()
             ->pluck('username');
 
-        return view('admin.campaign.show', compact('campaign', 'negotiates', 'statuses', 'platforms', 'usernames'));
+        return view('admin.campaign.show', compact('campaign', 'platforms', 'usernames'));
     }
 
     /**
