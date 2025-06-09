@@ -459,7 +459,7 @@
                 console.error('JavaScript Error:', e.error);
                 if (window.location.hostname !== 'localhost') {
                     // Only show user-friendly message in production
-                    showAlert('Something went wrong. Please refresh the page.', 'warning');
+                    // showAlert('Something went wrong. Please refresh the page.', 'warning');
                 }
             });
 
