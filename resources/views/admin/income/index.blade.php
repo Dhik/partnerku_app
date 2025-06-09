@@ -64,10 +64,10 @@
                     </div>
                     <div class="form-group">
                         <label for="team_in_charge">Team In Charge</label>
-                        <select class="form-control" id="team_in_charge" name="team_in_charge[]" multiple required>
+                        <select class="form-control select2" id="team_in_charge" name="team_in_charge[]" multiple required>
                             <!-- Options will be loaded via AJAX -->
                         </select>
-                        <small class="form-text text-muted">Hold Ctrl (or Cmd on Mac) to select multiple team members</small>
+                        <small class="form-text text-muted">Select multiple team members</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -122,6 +122,8 @@
 @section('css')
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css">
 @stop
 
 @section('js')
