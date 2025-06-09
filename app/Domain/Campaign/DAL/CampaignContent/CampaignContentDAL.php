@@ -2,9 +2,7 @@
 
 namespace App\Domain\Campaign\DAL\CampaignContent;
 
-use App\Domain\Campaign\Enums\OfferEnum;
 use App\Domain\Campaign\Models\CampaignContent;
-use App\Domain\Campaign\Models\Offer;
 use Carbon\Carbon;
 use Auth;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,7 +12,6 @@ class CampaignContentDAL implements CampaignContentDALInterface
 {
     public function __construct(
         protected CampaignContent $campaignContent,
-        protected Offer $offer
     ) {
     }
 
@@ -26,29 +23,6 @@ class CampaignContentDAL implements CampaignContentDALInterface
         return $this->campaignContent->query()
             ->where('campaign_contents.campaign_id', $campaignId)
             ->with(['keyOpinionLeader', 'createdBy', 'campaign']);
-    }
-
-    /**
-     * Get list approved KOL on campaign
-     */
-    public function getCampaignKOL(int $campaignId, ?string $search): ?Collection
-    {
-        $kol = $this->offer
-            ->select('key_opinion_leader_id', 'campaign_id') // Include all non-aggregated columns in the GROUP BY clause
-            ->selectRaw('SUM(acc_slot) as total_acc_slot')
-            ->with(['keyOpinionLeader' => function ($query) {
-                $query->select('id', 'channel', 'username');
-            }])
-            ->whereHas('keyOpinionLeader', function ($query) use ($search) {
-                $query->where('username', 'like', '%' . $search . '%');
-            })
-            ->where('campaign_id', $campaignId)
-            ->where('status', OfferEnum::Approved)
-            ->groupBy('key_opinion_leader_id', 'campaign_id') // Group by all non-aggregated columns
-            ->limit(50)
-            ->get();
-
-        return $kol;
     }
 
     /**

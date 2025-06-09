@@ -28,12 +28,6 @@ interface CampaignDALInterface extends BaseDALInterface
      * Delete Campaign
      */
     public function deleteCampaign(Campaign $campaign): void;
-
-    /**
-     * Check campaign offer
-     */
-    public function checkOffer(Campaign $campaign);
-
     /**
      * Check campaign content
      */

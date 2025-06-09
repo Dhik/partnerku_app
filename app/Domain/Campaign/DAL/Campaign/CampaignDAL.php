@@ -4,7 +4,6 @@ namespace App\Domain\Campaign\DAL\Campaign;
 
 use App\Domain\Campaign\Models\Campaign;
 use App\Domain\Campaign\Models\CampaignContent;
-use App\Domain\Campaign\Models\Offer;
 use App\DomainUtils\BaseDAL\BaseDAL;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -14,7 +13,6 @@ class CampaignDAL extends BaseDAL implements CampaignDALInterface
 {
     public function __construct(
         protected Campaign $campaign,
-        protected Offer $offer,
         protected CampaignContent $campaignContent
     ) {}
 
@@ -50,15 +48,6 @@ class CampaignDAL extends BaseDAL implements CampaignDALInterface
     {
         $campaign->delete();
     }
-
-    /**
-     * Check campaign offer
-     */
-    public function checkOffer(Campaign $campaign)
-    {
-        return $this->offer->where('campaign_id', $campaign->id)->first();
-    }
-
     /**
      * Check campaign content
      */

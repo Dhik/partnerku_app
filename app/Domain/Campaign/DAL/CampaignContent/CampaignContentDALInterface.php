@@ -12,12 +12,6 @@ interface CampaignContentDALInterface
      * Return campaign content datatable
      */
     public function getCampaignContentDatatable(int $campaignId): Builder;
-
-    /**
-     * Get list approved KOL on campaign
-     */
-    public function getCampaignKOL(int $campaignId, ?string $search): ?Collection;
-
     /**
      * Count user slot KOL on Campaign
      */
