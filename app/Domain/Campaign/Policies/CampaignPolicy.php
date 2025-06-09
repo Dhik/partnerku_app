@@ -49,7 +49,7 @@ class CampaignPolicy
      */
     public function DeleteCampaign(User $user, Campaign $campaign): bool
     {
-        if ($user->hasRole([RoleEnum::SuperAdmin, RoleEnum::BrandManager])) {
+        if ($user->hasRole([RoleEnum::SuperAdmin, RoleEnum::Client1])) {
             return true;
         }
 

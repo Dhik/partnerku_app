@@ -42,7 +42,7 @@ class CampaignContentPolicy
      */
     public function DeleteCampaignContent(User $user, CampaignContent $campaignContent): bool
     {
-        if ($user->hasRole([RoleEnum::SuperAdmin, RoleEnum::BrandManager])) {
+        if ($user->hasRole([RoleEnum::SuperAdmin, RoleEnum::Client1])) {
             return true;
         }
 
