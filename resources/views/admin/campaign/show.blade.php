@@ -2,260 +2,468 @@
 
 @section('title', trans('labels.campaign'))
 
+@section('adminlte_css')
+    <link rel="stylesheet" href="{{ asset('css/campaign-enhanced.css') }}">
+@stop
+
 @section('content_header')
-    <div class="d-flex justify-content-between align-items-center">
-        <h1 class="mb-0">{{ $campaign->title }} : {{ $campaign->start_date }} - {{ $campaign->end_date }}</h1>
-        <div>
-            @can('updateCampaign', $campaign)
-                <a href="{{ route('campaign.edit', $campaign->id) }}" class="btn btn-outline-success mr-1">
-                    {{ trans('buttons.edit') }}
-                </a>
-            @endcan
-        </div>
+<div class="d-flex justify-content-between align-items-center">
+    <h1 class="mb-0">{{ $campaign->title }} : {{ $campaign->start_date }} - {{ $campaign->end_date }}</h1>
+    <div>
+        @can('updateCampaign', $campaign)
+            <a href="{{ route('campaign.edit', $campaign->id) }}" class="btn btn-outline-success">
+                {{ trans('buttons.edit') }}
+            </a>
+        @endcan
     </div>
+</div>
 @stop
 
 @section('content')
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header p-2">
-                        <ul class="nav nav-pills">
-                            <li class="nav-item"><a class="nav-link active" href="#statistic" data-toggle="tab">{{ trans('labels.statistic') }}</a></li>
-                            <!-- <li class="nav-item"><a class="nav-link" href="#offer" data-toggle="tab">{{ trans('labels.offer') }}</a></li> -->
-                        </ul>
-                    </div>
-                    <div class="card-body">
-                        <div class="tab-content">
-                            <div class="tab-pane active" id="statistic">
-                                @include('admin.campaign.statistic')
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    {{-- Filter Controls --}}
+                    <div class="filter-controls">
+                        <div class="row">
+                            <div class="col-auto">
+                                <input type="text" class="form-control" id="filterDates" placeholder="Select Date Range" autocomplete="off">
+                            </div>
+                            <div class="col-auto">
+                                <select class="form-control" id="filterPlatform">
+                                    <option value="">All Platforms</option>
+                                    @foreach($platforms as $platform)
+                                        <option value="{{ $platform['value'] }}">{{ $platform['label'] }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="filterFyp">
+                                    <label class="form-check-label" for="filterFyp">FYP</label>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="filterPayment">
+                                    <label class="form-check-label" for="filterPayment">Payment</label>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="filterDelivery">
+                                    <label class="form-check-label" for="filterDelivery">Delivery</label>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <button id="resetFilterBtn" class="btn btn-secondary">Reset</button>
                             </div>
                         </div>
                     </div>
-                    <div class="card-footer">
-                        {{ trans('labels.created_by') }} {{ $campaign->createdBy->name ?? '' }}
 
-                        @can('deleteCampaign', $campaign)
-                            <a href="#" class="delete-campaign">{{ trans('buttons.delete') }}</a>
-                        @endcan
+                    {{-- KPI Cards --}}
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="small-box bg-white">
+                                <div class="inner">
+                                    <h4 id="totalExpense">0</h4>
+                                    <p>Total Pengeluaran</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-comment-dollar text-gray"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small-box bg-white">
+                                <div class="inner">
+                                    <h4 id="totalCPM">0</h4>
+                                    <p>Cost Per Mile</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-chart-bar text-gray"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small-box bg-white">
+                                <div class="inner">
+                                    <h4 id="totalInfluencer">0</h4>
+                                    <p>Total Influencer</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-bullhorn text-gray"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small-box bg-white">
+                                <div class="inner">
+                                    <h4 id="totalContent">0</h4>
+                                    <p>Total Konten</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-folder-open text-gray"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small-box bg-white">
+                                <div class="inner">
+                                    <h4 id="totalAchievement">0</h4>
+                                    <p>Pencapaian</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-trophy text-gray"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small-box bg-white">
+                                <div class="inner">
+                                    <h4 id="totalViews">0</h4>
+                                    <p>Video Views</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="far fa-eye text-gray"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small-box bg-white">
+                                <div class="inner">
+                                    <h4 id="totalLikes">0</h4>
+                                    <p>Likes</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-thumbs-up text-gray"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small-box bg-white">
+                                <div class="inner">
+                                    <h4 id="totalComment">0</h4>
+                                    <p>Comment</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-comment-dots text-gray"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small-box bg-white">
+                                <div class="inner">
+                                    <h4 id="engagementRate">0</h4>
+                                    <p>Engagement Rate</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-chart-line text-gray"></i>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    {{-- Statistics Chart --}}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Statistics Chart</h3>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="statisticChart" class="w-100" height="80"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Action Buttons --}}
+                    <div class="row mb-3">
+                        <div class="col-auto">
+                            @can('UpdateCampaign', $campaign)
+                                <button class="btn btn-primary" data-toggle="modal" data-target="#contentModal">
+                                    <i class="fas fa-plus"></i> Add Content
+                                </button>
+                            @endcan
+                        </div>
+                        <div class="col-auto">
+                            <a class="btn btn-outline-primary" href="{{ route('campaignContent.export', $campaign->id) }}">
+                                <i class="fas fa-file-download"></i> Export
+                            </a>
+                        </div>
+                    </div>
+
+                    {{-- Content Table --}}
+                    <div class="table-responsive">
+                        <table id="contentTable" class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>{{ trans('labels.influencer') }}</th>
+                                    <th>{{ trans('labels.platform') }}</th>
+                                    <th>{{ trans('labels.product') }}</th>
+                                    <th>{{ trans('labels.task') }}</th>
+                                    <th>{{ trans('labels.like') }}</th>
+                                    <th>{{ trans('labels.comment') }}</th>
+                                    <th>{{ trans('labels.view') }}</th>
+                                    <th>CPM</th>
+                                    <th>ER</th>
+                                    <th>Followers</th>
+                                    <th>Tiering</th>
+                                    <th>Status</th>
+                                    <th>{{ trans('labels.actions') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data populated via AJAX -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="card-footer">
+                    {{ trans('labels.created_by') }} {{ $campaign->createdBy->name ?? '' }}
+                    @can('deleteCampaign', $campaign)
+                        <a href="#" class="delete-campaign float-right text-danger">
+                            {{ trans('buttons.delete') }}
+                        </a>
+                    @endcan
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+{{-- Include All Modals --}}
+@include('admin.campaign.modals')
 @endsection
 
-@section('js')
+@section('adminlte_js')
+    <script src="{{ asset('js/campaign-enhanced.js') }}"></script>
+    
+    {{-- Include Chart.js for statistics chart --}}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script>
+        // Set global URLs for JavaScript
+        window.campaignContentStoreUrl = "{{ route('campaignContent.store', ['campaignId' => $campaign->id]) }}";
+        window.campaignContentUpdateUrl = "{{ route('campaignContent.update', ['campaignContent' => ':campaignContentId']) }}";
+        window.campaignContentDestroyUrl = "{{ route('campaignContent.destroy', ['campaignContent' => ':campaignContentId']) }}";
         
-        let campaignId = '{{ $campaign->id }}';
-        const filterStatus = $('#filterStatus');
-
-        const filterDates = $('#filterDates');
-        const filterInfluencer = $('#filterInfluencer');
-        const filterProduct = $('#filterProduct');
-        const filterPlatform = $('#filterPlatform');
-        const filterFyp = $('#filterFyp');
-        const filterPayment = $('#filterPayment');
-        const filterDelivery = $('#filterDelivery');
-
-        const contentTable = $('#contentTable').DataTable({
-            responsive: true,
-            processing: true,
-            serverSide: false, 
-            ajax: {
-                url: "{{ route('campaignContent.getJson', ['campaignId' => ':campaignId']) }}".replace(':campaignId', campaignId),
-                data: function (d) {
-                    d.filterInfluencer = filterInfluencer.val();
-                    d.filterProduct = filterProduct.val();
-                    d.filterPlatform = filterPlatform.val();
-                    d.filterFyp = filterFyp.prop('checked');
-                    d.filterPayment = filterPayment.prop('checked');
-                    d.filterDelivery = filterDelivery.prop('checked');
-                }
-            },
-            columns: [
-                { data: 'username' },
-                { data: 'channel', orderable: false },
-                { data: 'product', orderable: false },
-                { data: 'task', orderable: false },
-                { data: 'kode_ads', orderable: true, visible: false },
-                { data: 'upload_date', orderable: true, visible: false },
-                { data: 'like', className: "text-right", orderable: true }, 
-                { data: 'comment', className: "text-right", orderable: true }, 
-                { data: 'view', className: "text-right", orderable: true }, 
-                { data: 'cpm', className: "text-right", orderable: true }, 
-                { data: 'engagement_rate', className: "text-right", orderable: true }, 
-                { data: 'kol_followers', className: "text-right", orderable: true }, 
-                { data: 'tiering', className: "text-right", orderable: false }, 
-                { data: 'additional_info', orderable: false }, 
-                { data: 'actions', orderable: false, searchable: false },
-            ],
-            order: [[4, 'desc']],
-        });
-
-        function resetFilters() {
-            $('#filterDates').val('');
-            $('#filterPlatform').val('').trigger('change');
-            $('#filterFyp').prop('checked', false);
-            $('#filterPayment').prop('checked', false);
-            $('#filterDelivery').prop('checked', false);
-            $('#filterInfluencer').val('').trigger('change'); 
-            $('#filterProduct').val('').trigger('change'); 
-
-            contentTable.ajax.reload();
-
-            updateCard(); 
-            initChart(); 
-        }
-
-        $(window).on('load', function () {
-            resetFilters(); 
-        });
-
-        $('#resetFilterBtn').click(function () {
-            resetFilters(); 
-        });
+        // Chart instance
+        let campaignContentChart;
         
-        $('#refreshAllBtn').click(function() {
-            $('#refreshAllModal').modal('show');
-
-            $.ajax({
-                url: "{{ route('campaignContent.getDataTableForRefresh', ['campaignId' => $campaign->id]) }}",
-                method: 'GET',
-                success: function(data) {
-                    let contentList = '';
-                    data.forEach(function(content) {
-                        contentList += `
-                            <tr id="content-${content.id}">
-                                <td>${content.username}</td>
-                                <td>${content.task_name}</td>
-                                <td>${content.channel}</td>
-                                <td>${content.product}</td>
-                                <td class="text-center"><i class="fas fa-clock text-warning"></i></td>
-                            </tr>
-                        `;
-                    });
-                    $('#refreshAllContentList').html(contentList);
-                },
-                error: function() {
-                    alert('Failed to load content list.');
-                }
-            });
-        });
-
-        $('#confirmRefreshAll').click(function() {
-            const contents = $('#refreshAllContentList tr');
-            const totalContents = contents.length;
-            let completedContents = 0;
-
-            contents.each(function(index, contentRow) {
-                const contentId = $(contentRow).attr('id').split('-')[1];
-                
-                $(`#content-${contentId} td:last-child`).html('<i class="fas fa-spinner fa-spin text-primary"></i>');
-
-                $.ajax({
-                    url: "{{ route('statistic.refresh', ['campaignContent' => ':campaignContentId']) }}".replace(':campaignContentId', contentId),
-                    method: 'GET',
-                    success: function(data) {
-                        $(`#content-${contentId} td:last-child`).html('<i class="fas fa-check text-success"></i>');
-                        completedContents++;
-                        updateProgressBar(completedContents, totalContents);
-                    },
-                    error: function() {
-                        $(`#content-${contentId} td:last-child`).html('<i class="fas fa-times text-danger"></i>');
-                        completedContents++;
-                        updateProgressBar(completedContents, totalContents);
+        $(document).ready(function() {
+            const campaignId = '{{ $campaign->id }}';
+            
+            // Initialize content table
+            window.contentTable = $('#contentTable').DataTable({
+                responsive: true,
+                processing: true,
+                serverSide: false,
+                ajax: {
+                    url: "{{ route('campaignContent.getJson', ['campaignId' => $campaign->id]) }}",
+                    dataSrc: 'data',
+                    data: function(d) {
+                        d.filterPlatform = $('#filterPlatform').val();
+                        d.filterFyp = $('#filterFyp').prop('checked');
+                        d.filterPayment = $('#filterPayment').prop('checked');
+                        d.filterDelivery = $('#filterDelivery').prop('checked');
+                        d.filterDates = $('#filterDates').val();
                     }
-                });
+                },
+                columns: [
+                    {data: 'username'},
+                    {data: 'channel', orderable: false},
+                    {data: 'product', orderable: false},
+                    {data: 'task', orderable: false},
+                    {data: 'like', className: "text-right"},
+                    {data: 'comment', className: "text-right"},
+                    {data: 'view', className: "text-right"},
+                    {data: 'cpm', className: "text-right"},
+                    {data: 'engagement_rate', className: "text-right"},
+                    {data: 'kol_followers', className: "text-right"},
+                    {data: 'tiering', className: "text-center", orderable: false},
+                    {data: 'additional_info', orderable: false, searchable: false},
+                    {data: 'actions', orderable: false, searchable: false}
+                ],
+                order: [[6, 'desc']],
+                drawCallback: function() {
+                    $('[data-toggle="tooltip"]').tooltip();
+                }
             });
-        });
 
-        function updateProgressBar(completed, total) {
-            const progressPercentage = Math.round((completed / total) * 100);
-            $('#refreshProgressBar').css('width', progressPercentage + '%').attr('aria-valuenow', progressPercentage).text(progressPercentage + '%');
-            if (progressPercentage === 100) {
-                $('#refreshAllModal').modal('hide');
-                location.reload();
-            }
-        }
+            // Filter change handlers
+            $('#filterPlatform, #filterFyp, #filterPayment, #filterDelivery, #filterDates').on('change', function() {
+                window.contentTable.ajax.reload();
+                updateCard();
+                initChart();
+            });
 
-        $('#refreshFollowersBtn').click(function() {
-            $('#refreshFollowersModal').modal('show');
+            // Reset filters
+            $('#resetFilterBtn').on('click', function() {
+                $('#filterPlatform').val('');
+                $('#filterFyp, #filterPayment, #filterDelivery').prop('checked', false);
+                $('#filterDates').val('');
+                window.contentTable.ajax.reload();
+                updateCard();
+                initChart();
+            });
 
-            $.ajax({
-                url: "{{ route('campaignContent.getDataTableForRefresh', ['campaignId' => $campaign->id]) }}",
-                method: 'GET',
-                success: function(data) {
-                    const uniqueUsers = {};
-                    let userList = '';
-                    data.forEach(function(user) {
-                        const baseUsername = user.username.replace(/\s*\(.*?\)\s*/g, '');
-                        if (!uniqueUsers[user.username]) {
-                            uniqueUsers[user.username] = user;
-                            userList += `
-                                <tr id="user-${user.id}">
-                                    <td>${user.username}</td>
-                                    <td>${user.channel}</td>
-                                    <td class="text-center"><i class="fas fa-clock text-warning"></i></td>
-                                </tr>
-                            `;
+            // Date range picker
+            $('#filterDates').daterangepicker({
+                autoUpdateInput: false,
+                locale: { format: 'DD/MM/YYYY', cancelLabel: 'Clear' }
+            });
+
+            $('#filterDates').on('apply.daterangepicker', function(ev, picker) {
+                $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+                window.contentTable.ajax.reload();
+                updateCard();
+                initChart();
+            });
+
+            $('#filterDates').on('cancel.daterangepicker', function() {
+                $(this).val('');
+                window.contentTable.ajax.reload();
+                updateCard();
+                initChart();
+            });
+
+            // Delete campaign handler
+            $('.delete-campaign').click(function(e) {
+                e.preventDefault();
+                
+                CampaignUtils.confirmDelete('Delete Campaign', 'This campaign and all its content will be deleted.')
+                    .then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: '{{ route('campaign.destroy', $campaign->id) }}',
+                                type: 'DELETE',
+                                success: function() {
+                                    window.location.href = "{{ route('campaign.index') }}";
+                                },
+                                error: function(xhr) {
+                                    const message = CampaignUtils.handleError(xhr, 'Error deleting campaign');
+                                    CampaignUtils.showToast(message, 'error');
+                                }
+                            });
                         }
                     });
-                    $('#refreshFollowersList').html(userList);
-                },
-                error: function() {
-                    alert('Failed to load user list.');
-                }
             });
-        });
 
-        function updateProgressBarFollowers(completed, total) {
-            const progressPercentage = Math.round((completed / total) * 100);
-            $('#refreshFollowersProgressBar').css('width', progressPercentage + '%').attr('aria-valuenow', progressPercentage).text(progressPercentage + '%');
-            if (progressPercentage === 100) {
-                $('#refreshFollowersModal').modal('hide');
-                location.reload();
+            // Update KPI cards
+            function updateCard() {
+                $.ajax({
+                    url: "{{ route('statistic.card', ['campaignId' => $campaign->id]) }}" + '?filterDates=' + $('#filterDates').val(),
+                    method: 'GET',
+                    success: function(response) {
+                        $('#totalExpense').text(response.total_expense);
+                        $('#totalCPM').text(response.cpm);
+                        $('#totalInfluencer').text(response.total_influencer);
+                        $('#totalContent').text(response.total_content);
+                        $('#totalAchievement').text(response.achievement);
+                        $('#totalViews').text(response.view);
+                        $('#totalLikes').text(response.like);
+                        $('#totalComment').text(response.comment);
+                        $('#engagementRate').text(response.engagement_rate);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching card data', error);
+                    }
+                });
             }
-        }
 
-        contentTable.on('draw.dt', function() {
-            $('[data-toggle="tooltip"]').tooltip();
-        });
+            // Initialize chart
+            function initChart() {
+                $.ajax({
+                    url: "{{ route('statistic.chart', ['campaignId' => $campaign->id]) }}" + '?filterDates=' + $('#filterDates').val(),
+                    type: 'GET',
+                    success: function (response) {
+                        renderChart(response);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error fetching chart data', xhr.responseText);
+                    }
+                });
+            }
 
-        filterDates.change(function () {
-            contentTable.ajax.reload();
+            // Render chart
+            function renderChart(chartData) {
+                // Clear existing chart if it exists
+                if (campaignContentChart) {
+                    campaignContentChart.destroy();
+                }
+
+                const ctx = document.getElementById('statisticChart').getContext('2d');
+                campaignContentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.map(data => data.date),
+                        datasets: [{
+                            label: 'Views',
+                            data: chartData.map(data => data.total_view),
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            fill: false,
+                            tension: 0.1
+                        }, {
+                            label: 'Likes',
+                            data: chartData.map(data => data.total_like),
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            fill: false,
+                            tension: 0.1
+                        }, {
+                            label: 'Comments',
+                            data: chartData.map(data => data.total_comment),
+                            backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                            borderColor: 'rgba(255, 206, 86, 1)',
+                            fill: false,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Campaign Statistics Over Time'
+                            },
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Count'
+                                },
+                                beginAtZero: true
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        }
+                    }
+                });
+            }
+
+            // Initial load
             updateCard();
             initChart();
         });
-
-        filterPlatform.change(function() {
-            contentTable.ajax.reload();
-        });
-
-        filterFyp.change(function() {
-            contentTable.ajax.reload();
-        });
-
-        filterPayment.change(function() {
-            contentTable.ajax.reload();
-        });
-
-        filterDelivery.change(function() {
-            contentTable.ajax.reload();
-        });
     </script>
-
-    @include('admin.campaign.content.script.script-button-info')
-    @include('admin.campaign.content.script.script-refresh')
-    @include('admin.campaign.content.script.script-manual-statistic')
-    @include('admin.campaign.content.script.script-add-content')
-    @include('admin.campaign.content.script.script-update-content')
-    @include('admin.campaign.content.script.script-import')
-    @include('admin.campaign.content.script.script-import-kol')
-    @include('admin.campaign.content.script.script-detail-content')
-    @include('admin.campaign.content.script.script-card')
-    @include('admin.campaign.content.script.script-chart')
-    @include('admin.campaign.content.script.script-delete-content')
-@endsection
+@stop

@@ -9,6 +9,7 @@ use App\Domain\Campaign\Exports\CampaignContentTemplateExport;
 use App\Domain\Campaign\Exports\CampaignContentTemplateKOLExport;
 use App\Domain\Campaign\Models\Campaign;
 use App\Domain\Campaign\Models\CampaignContent;
+use App\Domain\Campaign\Models\KeyOpinionLeader;
 use App\Domain\Campaign\Models\Statistic;
 use App\Domain\Campaign\Requests\CampaignContentRequest;
 use App\Domain\Campaign\Requests\CampaignUpdateContentRequest;

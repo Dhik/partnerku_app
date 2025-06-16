@@ -1,4 +1,3 @@
-{{-- modal-update-content.blade.php --}}
 <div class="modal fade" id="contentUpdateModal" tabindex="-1" role="dialog" aria-labelledby="contentUpdateModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -8,9 +7,11 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body">
-                <form id="contentUpdateForm">
+            <form id="contentUpdateForm">
+                <div class="modal-body">
                     @csrf
+                    <input type="hidden" id="contentId">
+                    
                     <div class="form-group">
                         <label for="usernameUpdate">{{ trans('labels.influencer') }}<span class="required">*</span></label>
                         <input type="text" class="form-control" id="usernameUpdate" readonly>
@@ -72,17 +73,15 @@
                         <input type="number" class="form-control" id="commentsUpdate" name="comments" placeholder="{{ trans('placeholder.input', ['field' => trans('labels.comment')]) }}">
                     </div>
 
-                    <input type="hidden" id="contentId">
-
                     <div class="form-group d-none" id="errorContentUpdate"></div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="submit" form="contentUpdateForm" class="btn btn-primary">
-                    <i class="fas fa-save"></i> {{ trans('buttons.update') }}
-                </button>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> {{ trans('buttons.update') }}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

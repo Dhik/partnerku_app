@@ -1,4 +1,3 @@
-{{-- modal-create-content.blade.php --}}
 <div class="modal fade" id="contentModal" tabindex="-1" role="dialog" aria-labelledby="contentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -8,12 +7,12 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body">
-                <form id="contentForm">
+            <form id="contentForm">
+                <div class="modal-body">
                     @csrf
                     <div class="form-group">
                         <label for="username">{{ trans('labels.influencer') }}<span class="required">*</span></label>
-                        <input type="text" class="form-control" name="username" placeholder="{{ trans('placeholder.input', ['field' => trans('labels.influencer')]) }}">
+                        <input type="text" class="form-control" id="username" name="username" placeholder="{{ trans('placeholder.input', ['field' => trans('labels.influencer')]) }}" required>
                     </div>
 
                     <div class="form-group">
@@ -29,6 +28,7 @@
                     <div class="form-group">
                         <label for="platform">{{ trans('labels.platform') }}<span class="required">*</span></label>
                         <select class="form-control" id="platform" name="channel" required>
+                            <option value="">Select Platform</option>
                             @foreach($platforms as $platform)
                                 <option value="{{ $platform['value'] }}">
                                     {{ $platform['label'] }}
@@ -58,15 +58,15 @@
                     </div>
 
                     <div class="form-group d-none" id="errorContent"></div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="submit" form="contentForm" class="btn btn-primary">
-                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                    <i class="fas fa-save"></i> {{ trans('buttons.save') }}
-                </button>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        <i class="fas fa-save"></i> {{ trans('buttons.save') }}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

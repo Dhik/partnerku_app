@@ -1,4 +1,3 @@
-{{-- modal-create-statistic.blade.php --}}
 <div class="modal fade" id="statisticModal" tabindex="-1" role="dialog" aria-labelledby="statisticModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -8,12 +7,12 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body">
-                <form id="statisticForm">
+            <form id="statisticForm">
+                <div class="modal-body">
                     @csrf
                     <div class="form-group">
                         <label for="date">{{ trans('labels.date') }}</label>
-                        <input type="text" class="form-control" id="date" name="view" readonly value="{{ \Carbon\Carbon::now()->format('d M Y') }}">
+                        <input type="text" class="form-control" id="date" name="date" readonly value="{{ \Carbon\Carbon::now()->format('d M Y') }}">
                     </div>
 
                     <div class="form-group">
@@ -34,14 +33,14 @@
                     <input type="hidden" id="statisticContentId">
 
                     <div class="form-group d-none" id="errorStatistic"></div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="submit" form="statisticForm" class="btn btn-primary">
-                    <i class="fas fa-save"></i> {{ trans('buttons.save') }}
-                </button>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> {{ trans('buttons.save') }}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
