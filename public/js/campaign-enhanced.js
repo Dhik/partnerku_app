@@ -460,6 +460,10 @@ function loadContentEmbed(link, channel) {
             embedContainer.html(`<iframe width="315" height="560" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`);
             break;
             
+        case 'shopee_video':
+            embedContainer.html(`<iframe src="${link}" width="315" height="560" frameborder="0" allowfullscreen></iframe>`);
+            break;
+            
         default:
             embedContainer.html(`<a href="${link}" target="_blank" class="btn btn-primary">View Content</a>`);
             break;

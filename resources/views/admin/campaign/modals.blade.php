@@ -157,9 +157,12 @@
             </div>
             <div class="modal-body">
                 <div class="row">
+                    {{-- Content Embed --}}
                     <div class="col-md-4">
                         <div id="contentEmbed"></div>
                     </div>
+                    
+                    {{-- Statistics Info --}}
                     <div class="col-md-8">
                         <div class="row">
                             <div class="col-12 col-sm-4">
@@ -202,6 +205,28 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="col-12">
+                                <div class="info-box bg-light">
+                                    <div class="info-box-content">
+                                        <span class="info-box-text text-center text-muted">Kode Ads</span>
+                                        <span class="info-box-number text-center text-muted mb-0" id="kodeAdsModal">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {{-- Statistics Chart --}}
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Statistics Over Time</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="statisticDetailChart" style="height: 300px;"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -230,17 +255,17 @@
                     
                     <div class="form-group">
                         <label for="view">{{ trans('labels.view') }}</label>
-                        <input type="number" class="form-control" id="view" name="view">
+                        <input type="number" class="form-control" id="view" name="view" min="0">
                     </div>
 
                     <div class="form-group">
                         <label for="like">{{ trans('labels.like') }}</label>
-                        <input type="number" class="form-control" id="like" name="like">
+                        <input type="number" class="form-control" id="like" name="like" min="0">
                     </div>
 
                     <div class="form-group">
                         <label for="comment">{{ trans('labels.comment') }}</label>
-                        <input type="number" class="form-control" id="comment" name="comment">
+                        <input type="number" class="form-control" id="comment" name="comment" min="0">
                     </div>
                 </div>
                 <div class="modal-footer">

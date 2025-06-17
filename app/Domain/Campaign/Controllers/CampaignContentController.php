@@ -215,35 +215,62 @@ class CampaignContentController extends Controller
     {
         $actionsHtml = '
             <div class="btn-group">
-                <button class="btn btn-info btn-sm btnDetail">' . trans("labels.detail") . '</button>
+                <button class="btn btn-info btn-sm btnDetail" data-toggle="tooltip" title="View Details">
+                    <i class="fas fa-eye"></i>
+                </button>
                 <button type="button" class="btn btn-info btn-sm dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                     <span class="sr-only">Toggle Dropdown</span>
                 </button>
-                <div class="dropdown-menu" role="menu" style="">';
+                <div class="dropdown-menu" role="menu">';
 
-        if (in_array($row->channel, [CampaignContentEnum::InstagramFeed, CampaignContentEnum::TiktokVideo, CampaignContentEnum::TwitterPost, CampaignContentEnum::YoutubeVideo, CampaignContentEnum::ShopeeVideo])) {
+        // Refresh button for supported platforms
+        if (in_array($row->channel, [
+            CampaignContentEnum::InstagramFeed, 
+            CampaignContentEnum::TiktokVideo, 
+            CampaignContentEnum::TwitterPost, 
+            CampaignContentEnum::YoutubeVideo, 
+            CampaignContentEnum::ShopeeVideo
+        ])) {
             $actionsHtml .= '
-            <button class="dropdown-item btnRefresh">
-                ' . trans("labels.refresh") . '
-            </button>';
+                <button class="dropdown-item btnRefresh" data-toggle="tooltip" title="Refresh Statistics">
+                    <i class="fas fa-sync-alt"></i> ' . trans("labels.refresh") . '
+                </button>';
         }
 
+        // Update button
         if (Gate::allows('updateCampaign', $row->campaign)) {
             $actionsHtml .= '
-                <button class="dropdown-item btnUpdateContent">' . trans("labels.update") . '</button>';
+                <button class="dropdown-item btnUpdateContent" data-toggle="tooltip" title="Edit Content">
+                    <i class="fas fa-edit"></i> ' . trans("labels.update") . '
+                </button>';
         }
 
-        if (Gate::allows('updateCampaign', $row->campaign) && !in_array($row->channel, [CampaignContentEnum::InstagramFeed, CampaignContentEnum::TiktokVideo, CampaignContentEnum::TwitterPost, CampaignContentEnum::YoutubeVideo, CampaignContentEnum::ShopeeVideo])) {
+        // Manual statistics for non-auto platforms
+        if (Gate::allows('updateCampaign', $row->campaign) && !in_array($row->channel, [
+            CampaignContentEnum::InstagramFeed, 
+            CampaignContentEnum::TiktokVideo, 
+            CampaignContentEnum::TwitterPost, 
+            CampaignContentEnum::YoutubeVideo, 
+            CampaignContentEnum::ShopeeVideo
+        ])) {
             $actionsHtml .= '
-                <button class="dropdown-item btnStatistic">' . trans("labels.manual") . ' ' . trans("labels.data") . '</button>';
+                <button class="dropdown-item btnStatistic" data-toggle="tooltip" title="Add Manual Statistics">
+                    <i class="fas fa-chart-line"></i> ' . trans("labels.manual") . ' ' . trans("labels.data") . '
+                </button>';
         }
 
+        // Delete button
         if (Gate::allows('deleteCampaign', $row->campaign)) {
             $actionsHtml .= '
                 <div class="dropdown-divider"></div>
-                <a class="dropdown-item btnDeleteContent" href="#">' . trans('labels.delete') . '</a>
-            ';
+                <button class="dropdown-item btnDeleteContent text-danger" data-toggle="tooltip" title="Delete Content">
+                    <i class="fas fa-trash"></i> ' . trans('labels.delete') . '
+                </button>';
         }
+
+        $actionsHtml .= '
+                </div>
+            </div>';
 
         return $actionsHtml;
     }

@@ -63,123 +63,6 @@
                         </div>
                     </div>
 
-                    {{-- KPI Cards --}}
-                    <div class="row mb-4">
-                        <div class="col-md-4">
-                            <div class="small-box bg-white">
-                                <div class="inner">
-                                    <h4 id="totalExpense">0</h4>
-                                    <p>Total Pengeluaran</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-comment-dollar text-gray"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small-box bg-white">
-                                <div class="inner">
-                                    <h4 id="totalCPM">0</h4>
-                                    <p>Cost Per Mile</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-chart-bar text-gray"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small-box bg-white">
-                                <div class="inner">
-                                    <h4 id="totalInfluencer">0</h4>
-                                    <p>Total Influencer</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-bullhorn text-gray"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small-box bg-white">
-                                <div class="inner">
-                                    <h4 id="totalContent">0</h4>
-                                    <p>Total Konten</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-folder-open text-gray"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small-box bg-white">
-                                <div class="inner">
-                                    <h4 id="totalAchievement">0</h4>
-                                    <p>Pencapaian</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-trophy text-gray"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small-box bg-white">
-                                <div class="inner">
-                                    <h4 id="totalViews">0</h4>
-                                    <p>Video Views</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="far fa-eye text-gray"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small-box bg-white">
-                                <div class="inner">
-                                    <h4 id="totalLikes">0</h4>
-                                    <p>Likes</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-thumbs-up text-gray"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small-box bg-white">
-                                <div class="inner">
-                                    <h4 id="totalComment">0</h4>
-                                    <p>Comment</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-comment-dots text-gray"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="small-box bg-white">
-                                <div class="inner">
-                                    <h4 id="engagementRate">0</h4>
-                                    <p>Engagement Rate</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-chart-line text-gray"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Statistics Chart --}}
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h3 class="card-title">Statistics Chart</h3>
-                                </div>
-                                <div class="card-body">
-                                    <canvas id="statisticChart" class="w-100" height="80"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     {{-- Action Buttons --}}
                     <div class="row mb-3">
                         <div class="col-auto">
@@ -190,9 +73,31 @@
                             @endcan
                         </div>
                         <div class="col-auto">
+                            <button id="refreshAllBtn" class="btn btn-success">
+                                <i class="fas fa-sync-alt"></i> Refresh All Statistics
+                            </button>
+                        </div>
+                        <div class="col-auto">
                             <a class="btn btn-outline-primary" href="{{ route('campaignContent.export', $campaign->id) }}">
                                 <i class="fas fa-file-download"></i> Export
                             </a>
+                        </div>
+                    </div>
+
+                    {{-- KPI Cards --}}
+                    @include('admin.campaign.content.statisticCard')
+
+                    {{-- Statistics Chart --}}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Campaign Statistics Chart</h3>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="statisticChart" style="height: 400px;"></canvas>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -242,21 +147,13 @@
 
 @section('adminlte_js')
     <script src="{{ asset('js/campaign-enhanced.js') }}"></script>
-    
-    {{-- Include Chart.js for statistics chart --}}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
-        // Set global URLs for JavaScript
-        window.campaignContentStoreUrl = "{{ route('campaignContent.store', ['campaignId' => $campaign->id]) }}";
-        window.campaignContentUpdateUrl = "{{ route('campaignContent.update', ['campaignContent' => ':campaignContentId']) }}";
-        window.campaignContentDestroyUrl = "{{ route('campaignContent.destroy', ['campaignContent' => ':campaignContentId']) }}";
-        
-        // Chart instance
+        const campaignId = '{{ $campaign->id }}';
         let campaignContentChart;
         
         $(document).ready(function() {
-            const campaignId = '{{ $campaign->id }}';
             
             // Initialize content table
             window.contentTable = $('#contentTable').DataTable({
@@ -295,14 +192,299 @@
                 }
             });
 
-            // Filter change handlers
+            // ===== REFRESH STATISTICS =====
+            
+            // Single content refresh
+            $(document).on('click', '.btnRefresh', function(e) {
+                e.preventDefault();
+                const button = $(this);
+                const rowData = TableManager.getRowData(window.contentTable, this);
+                if (!rowData) return;
+
+                const originalText = button.html();
+                button.html('<i class="fas fa-spinner fa-spin"></i> Refreshing...').prop('disabled', true);
+
+                $.ajax({
+                    url: `{{ route('statistic.refresh', ['campaignContent' => ':id']) }}`.replace(':id', rowData.id),
+                    method: 'GET',
+                    success: function(response) {
+                        window.contentTable.ajax.reload();
+                        updateCard();
+                        initChart();
+                        CampaignUtils.showToast('Statistics refreshed successfully!');
+                    },
+                    error: function(xhr) {
+                        const message = CampaignUtils.handleError(xhr, 'Refresh failed');
+                        CampaignUtils.showToast(message, 'error');
+                    },
+                    complete: function() {
+                        button.html(originalText).prop('disabled', false);
+                    }
+                });
+            });
+
+            // Bulk refresh
+            $('#refreshAllBtn').click(function() {
+                const button = $(this);
+                CampaignUtils.setButtonLoading(button, true);
+                
+                $.ajax({
+                    url: `{{ route('statistic.bulkRefresh', ['campaign' => $campaign->id]) }}`,
+                    method: 'GET',
+                    success: function(response) {
+                        window.contentTable.ajax.reload();
+                        updateCard();
+                        initChart();
+                        
+                        let message = response.message || 'Bulk refresh completed successfully!';
+                        if (response.stats) {
+                            message += ` (${response.stats.success_count} succeeded, ${response.stats.failed_count} failed)`;
+                        }
+                        CampaignUtils.showToast(message);
+                    },
+                    error: function(xhr) {
+                        const message = CampaignUtils.handleError(xhr, 'Bulk refresh failed');
+                        CampaignUtils.showToast(message, 'error');
+                    },
+                    complete: function() {
+                        CampaignUtils.setButtonLoading(button, false);
+                    }
+                });
+            });
+
+            // ===== MANUAL STATISTICS =====
+            
+            $(document).on('click', '.btnStatistic', function(e) {
+                e.preventDefault();
+                const rowData = TableManager.getRowData(window.contentTable, this);
+                if (!rowData) return;
+
+                $('#statisticContentId').val(rowData.id);
+                $('#view').val(rowData.view || '');
+                $('#like').val(rowData.like || '');
+                $('#comment').val(rowData.comment || '');
+                
+                ModalManager.show('#statisticModal');
+            });
+
+            $('#statisticForm').on('submit', function(e) {
+                e.preventDefault();
+                const form = $(this);
+                const contentId = $('#statisticContentId').val();
+                const submitBtn = form.find('button[type="submit"]');
+                
+                if (!contentId) return;
+                
+                CampaignUtils.setButtonLoading(submitBtn, true);
+                
+                $.ajax({
+                    type: 'POST',
+                    url: `{{ route('statistic.store', ['campaignContent' => ':id']) }}`.replace(':id', contentId),
+                    data: form.serialize(),
+                    success: function(response) {
+                        window.contentTable.ajax.reload();
+                        updateCard();
+                        initChart();
+                        ModalManager.hide('#statisticModal');
+                        CampaignUtils.showToast('Statistics saved successfully!');
+                    },
+                    error: function(xhr) {
+                        const message = CampaignUtils.handleError(xhr, 'Error saving statistics');
+                        CampaignUtils.showToast(message, 'error');
+                    },
+                    complete: function() {
+                        CampaignUtils.setButtonLoading(submitBtn, false);
+                    }
+                });
+            });
+
+            // ===== DETAIL MODAL =====
+            
+            $(document).on('click', '.btnDetail', function(e) {
+                e.preventDefault();
+                const rowData = TableManager.getRowData(window.contentTable, this);
+                if (!rowData) return;
+
+                // Update basic info
+                $('#likeModal').text(CampaignUtils.formatNumber(rowData.like));
+                $('#viewModal').text(CampaignUtils.formatNumber(rowData.view));
+                $('#commentModal').text(CampaignUtils.formatNumber(rowData.comment));
+                $('#rateCardModal').text(rowData.rate_card_formatted || '0');
+                $('#kodeAdsModal').text(rowData.kode_ads || '-');
+                $('#uploadDateModal').text(rowData.upload_date || 'Not posted yet');
+
+                // Load content embed
+                loadContentEmbed(rowData.link, rowData.channel);
+                
+                // Load detailed statistics chart
+                loadDetailChart(rowData.id);
+                
+                ModalManager.show('#detailModal');
+            });
+
+            // ===== CHARTS =====
+            
+            function updateCard() {
+                const filterDates = $('#filterDates').val();
+                const url = `{{ route('statistic.card', ['campaignId' => $campaign->id]) }}${filterDates ? '?filterDates=' + encodeURIComponent(filterDates) : ''}`;
+                
+                $.ajax({
+                    url: url,
+                    method: 'GET',
+                    success: function(response) {
+                        $('#totalExpense').text(response.total_expense || '0');
+                        $('#totalCPM').text(response.cpm || '0');
+                        $('#totalInfluencer').text(response.total_influencer || '0');
+                        $('#totalContent').text(response.total_content || '0');
+                        $('#totalAchievement').text(response.achievement || '0');
+                        $('#totalViews').text(response.view || '0');
+                        $('#totalLikes').text(response.like || '0');
+                        $('#totalComment').text(response.comment || '0');
+                        $('#engagementRate').text(response.engagement_rate || '0%');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching card data:', error);
+                    }
+                });
+            }
+
+            function initChart() {
+                const filterDates = $('#filterDates').val();
+                const url = `{{ route('statistic.chart', ['campaignId' => $campaign->id]) }}${filterDates ? '?filterDates=' + encodeURIComponent(filterDates) : ''}`;
+                
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    success: function(response) {
+                        renderChart(response);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching chart data:', xhr.responseText);
+                    }
+                });
+            }
+
+            function renderChart(chartData) {
+                if (campaignContentChart) {
+                    campaignContentChart.destroy();
+                }
+
+                const ctx = document.getElementById('statisticChart').getContext('2d');
+                campaignContentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.map(data => data.date),
+                        datasets: [{
+                            label: 'Views',
+                            data: chartData.map(data => data.total_view || 0),
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            fill: false,
+                            tension: 0.1
+                        }, {
+                            label: 'Likes',
+                            data: chartData.map(data => data.total_like || 0),
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            fill: false,
+                            tension: 0.1
+                        }, {
+                            label: 'Comments',
+                            data: chartData.map(data => data.total_comment || 0),
+                            backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                            borderColor: 'rgba(255, 206, 86, 1)',
+                            fill: false,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Campaign Statistics Over Time'
+                            }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: 'Date' }},
+                            y: { title: { display: true, text: 'Count' }, beginAtZero: true }
+                        }
+                    }
+                });
+            }
+
+            function loadDetailChart(contentId) {
+                $.ajax({
+                    url: `{{ route('statistic.chartDetail', ['campaignContentId' => ':id']) }}`.replace(':id', contentId),
+                    type: 'GET',
+                    success: function(response) {
+                        renderDetailChart(response);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching detail chart:', xhr.responseText);
+                    }
+                });
+            }
+
+            function renderDetailChart(chartData) {
+                if (window.statisticDetailChart) {
+                    window.statisticDetailChart.destroy();
+                }
+
+                const ctx = document.getElementById('statisticDetailChart').getContext('2d');
+                window.statisticDetailChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.map(data => data.date),
+                        datasets: [{
+                            label: 'Views',
+                            data: chartData.map(data => data.view || 0),
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            fill: false,
+                            tension: 0.1
+                        }, {
+                            label: 'Likes',
+                            data: chartData.map(data => data.like || 0),
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            fill: false,
+                            tension: 0.1
+                        }, {
+                            label: 'Comments',
+                            data: chartData.map(data => data.comment || 0),
+                            backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                            borderColor: 'rgba(255, 206, 86, 1)',
+                            fill: false,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Content Statistics Over Time'
+                            }
+                        },
+                        scales: {
+                            x: { title: { display: true, text: 'Date' }},
+                            y: { title: { display: true, text: 'Count' }, beginAtZero: true }
+                        }
+                    }
+                });
+            }
+
+            // ===== FILTER HANDLERS =====
+            
             $('#filterPlatform, #filterFyp, #filterPayment, #filterDelivery, #filterDates').on('change', function() {
                 window.contentTable.ajax.reload();
                 updateCard();
                 initChart();
             });
 
-            // Reset filters
             $('#resetFilterBtn').on('click', function() {
                 $('#filterPlatform').val('');
                 $('#filterFyp, #filterPayment, #filterDelivery').prop('checked', false);
@@ -342,6 +524,7 @@
                             $.ajax({
                                 url: '{{ route('campaign.destroy', $campaign->id) }}',
                                 type: 'DELETE',
+                                data: { _token: '{{ csrf_token() }}' },
                                 success: function() {
                                     window.location.href = "{{ route('campaign.index') }}";
                                 },
@@ -354,116 +537,62 @@
                     });
             });
 
-            // Update KPI cards
-            function updateCard() {
-                $.ajax({
-                    url: "{{ route('statistic.card', ['campaignId' => $campaign->id]) }}" + '?filterDates=' + $('#filterDates').val(),
-                    method: 'GET',
-                    success: function(response) {
-                        $('#totalExpense').text(response.total_expense);
-                        $('#totalCPM').text(response.cpm);
-                        $('#totalInfluencer').text(response.total_influencer);
-                        $('#totalContent').text(response.total_content);
-                        $('#totalAchievement').text(response.achievement);
-                        $('#totalViews').text(response.view);
-                        $('#totalLikes').text(response.like);
-                        $('#totalComment').text(response.comment);
-                        $('#engagementRate').text(response.engagement_rate);
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error fetching card data', error);
-                    }
-                });
-            }
-
-            // Initialize chart
-            function initChart() {
-                $.ajax({
-                    url: "{{ route('statistic.chart', ['campaignId' => $campaign->id]) }}" + '?filterDates=' + $('#filterDates').val(),
-                    type: 'GET',
-                    success: function (response) {
-                        renderChart(response);
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Error fetching chart data', xhr.responseText);
-                    }
-                });
-            }
-
-            // Render chart
-            function renderChart(chartData) {
-                // Clear existing chart if it exists
-                if (campaignContentChart) {
-                    campaignContentChart.destroy();
-                }
-
-                const ctx = document.getElementById('statisticChart').getContext('2d');
-                campaignContentChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: chartData.map(data => data.date),
-                        datasets: [{
-                            label: 'Views',
-                            data: chartData.map(data => data.total_view),
-                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            fill: false,
-                            tension: 0.1
-                        }, {
-                            label: 'Likes',
-                            data: chartData.map(data => data.total_like),
-                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            fill: false,
-                            tension: 0.1
-                        }, {
-                            label: 'Comments',
-                            data: chartData.map(data => data.total_comment),
-                            backgroundColor: 'rgba(255, 206, 86, 0.2)',
-                            borderColor: 'rgba(255, 206, 86, 1)',
-                            fill: false,
-                            tension: 0.1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Campaign Statistics Over Time'
-                            },
-                            legend: {
-                                display: true,
-                                position: 'top'
-                            }
-                        },
-                        scales: {
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Date'
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: true,
-                                    text: 'Count'
-                                },
-                                beginAtZero: true
-                            }
-                        },
-                        interaction: {
-                            intersect: false,
-                            mode: 'index'
-                        }
-                    }
-                });
-            }
-
-            // Initial load
+            // ===== INITIALIZATION =====
             updateCard();
             initChart();
         });
+
+        // ===== UTILITY FUNCTIONS =====
+
+        function loadContentEmbed(link, channel) {
+            const embedContainer = $('#contentEmbed');
+            
+            if (!link) {
+                embedContainer.html('<p class="text-muted">No content link provided</p>');
+                return;
+            }
+            
+            switch (channel) {
+                case 'twitter_post':
+                    const twitterLink = link.replace('https://x.com/', 'https://twitter.com/');
+                    embedContainer.html(`<blockquote class="twitter-tweet"><a href="${twitterLink}"></a></blockquote>`);
+                    if (typeof twttr !== 'undefined') {
+                        twttr.widgets.load(embedContainer[0]);
+                    }
+                    break;
+                    
+                case 'tiktok_video':
+                    embedContainer.html('<div class="text-center"><div class="spinner-border"></div></div>');
+                    $.ajax({
+                        url: `https://www.tiktok.com/oembed?url=${encodeURIComponent(link)}`,
+                        success: function(response) {
+                            embedContainer.html(response.html);
+                        },
+                        error: function() {
+                            embedContainer.html(`<a href="${link}" target="_blank" class="btn btn-primary">View TikTok Video</a>`);
+                        }
+                    });
+                    break;
+                    
+                case 'instagram_feed':
+                    const cleanLink = link.split('?')[0];
+                    const embedLink = cleanLink.endsWith('/') ? cleanLink + 'embed' : cleanLink + '/embed';
+                    embedContainer.html(`<iframe width="315" height="560" src="${embedLink}" frameborder="0"></iframe>`);
+                    break;
+                    
+                case 'youtube_video':
+                    const videoId = link.split('/').pop();
+                    embedContainer.html(`<iframe width="315" height="560" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`);
+                    break;
+                    
+                case 'shopee_video':
+                    embedContainer.html(`<iframe src="${link}" width="315" height="560" frameborder="0" allowfullscreen></iframe>`);
+                    break;
+                    
+                default:
+                    embedContainer.html(`<a href="${link}" target="_blank" class="btn btn-primary">View Content</a>`);
+                    break;
+            }
+        }
     </script>
 @stop
