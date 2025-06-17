@@ -17,28 +17,22 @@ class UserRequest extends FormRequest
         // Get the current authenticated user
         $currentUser = auth()->user();
 
+        // Only SuperAdmin can create users
         if ($currentUser->hasRole(RoleEnum::SuperAdmin)) {
-            // Define the roles that should not be allowed for creation
+            // SuperAdmin can create any user except other SuperAdmins
             $forbiddenRoles = [RoleEnum::SuperAdmin];
 
-            // Check if any forbidden role exists in the input roles array
+            // Check if trying to assign SuperAdmin role
             if (count(array_intersect($this->input('roles', []), $forbiddenRoles)) > 0) {
-                return false; // Deny authorization
+                return false; // SuperAdmin cannot create other SuperAdmins
             }
 
-            $assignedTenants = $this->input('tenants', []);
-            $currentUserTenant = $currentUser->tenants()->get()->pluck('id')->toArray();
-
-            // Find the difference between assigned tenants and user's tenants
-            $missingTenants = array_diff($assignedTenants, $currentUserTenant);
-
-            // If the difference is empty, all assigned tenants exist for the user
-            if (! empty($missingTenants)) {
-                return false;
-            }
+            // SuperAdmin can assign any tenants, so return true
+            return true;
         }
 
-        return true;
+        // All other roles cannot create users
+        return false;
     }
 
     /**
@@ -52,9 +46,28 @@ class UserRequest extends FormRequest
             'name' => ['string', 'required', 'max:255'],
             'email' => ['email', 'required', 'unique:users,email'],
             'phone_number' => ['string', 'required', 'max:255', 'unique:users,phone_number'],
-            'position' => ['string', 'max:255'],
-            'roles' => ['required'],
+            'position' => ['string', 'required', 'max:255'],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['string', 'exists:roles,name'],
+            'tenants' => ['nullable', 'array'],
+            'tenants.*' => ['integer', 'exists:tenants,id'],
             'password' => ['required', 'confirmed', 'min:6'],
+        ];
+    }
+
+    /**
+     * Get custom error messages for validator errors.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return [
+            'roles.required' => 'Please select at least one role.',
+            'roles.min' => 'Please select at least one role.',
+            'roles.*.exists' => 'One or more selected roles are invalid.',
+            'tenants.*.exists' => 'One or more selected tenants are invalid.',
+            'position.required' => 'Position field is required.',
         ];
     }
 }
