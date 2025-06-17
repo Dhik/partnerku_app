@@ -6,7 +6,7 @@ use App\Domain\Tenant\Models\Tenant;
 use App\Domain\Tenant\Requests\TenantRequest;
 use App\DomainUtils\BaseBLL\BaseBLLInterface;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 
 interface TenantBLLInterface extends BaseBLLInterface
 {

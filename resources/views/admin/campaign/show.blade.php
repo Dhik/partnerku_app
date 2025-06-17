@@ -225,32 +225,94 @@
 
             // Bulk refresh
             $('#refreshAllBtn').click(function() {
-                const button = $(this);
-                CampaignUtils.setButtonLoading(button, true);
+                // Show modal and load content list
+                ModalManager.show('#bulkRefreshModal');
                 
                 $.ajax({
-                    url: `{{ route('statistic.bulkRefresh', ['campaign' => $campaign->id]) }}`,
+                    url: "{{ route('campaignContent.getDataTableForRefresh', ['campaignId' => $campaign->id]) }}",
                     method: 'GET',
-                    success: function(response) {
-                        window.contentTable.ajax.reload();
-                        updateCard();
-                        initChart();
-                        
-                        let message = response.message || 'Bulk refresh completed successfully!';
-                        if (response.stats) {
-                            message += ` (${response.stats.success_count} succeeded, ${response.stats.failed_count} failed)`;
-                        }
-                        CampaignUtils.showToast(message);
+                    success: function(data) {
+                        let contentList = '';
+                        data.forEach(function(content) {
+                            contentList += `
+                                <tr id="refresh-content-${content.id}">
+                                    <td>${content.username}</td>
+                                    <td>${content.channel}</td>
+                                    <td>${content.product}</td>
+                                    <td class="text-center">
+                                        <i class="fas fa-clock text-warning" title="Waiting"></i>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        $('#bulkRefreshContentList').html(contentList);
                     },
-                    error: function(xhr) {
-                        const message = CampaignUtils.handleError(xhr, 'Bulk refresh failed');
-                        CampaignUtils.showToast(message, 'error');
-                    },
-                    complete: function() {
-                        CampaignUtils.setButtonLoading(button, false);
+                    error: function() {
+                        CampaignUtils.showToast('Failed to load content list', 'error');
+                        ModalManager.hide('#bulkRefreshModal');
                     }
                 });
             });
+
+            $('#confirmBulkRefresh').click(function() {
+                const button = $(this);
+                const closeButton = $('.modal-footer .btn-secondary');
+                
+                // Disable buttons during refresh
+                button.prop('disabled', true);
+                closeButton.prop('disabled', true);
+                
+                const contents = $('#bulkRefreshContentList tr');
+                const totalContents = contents.length;
+                let completedContents = 0;
+                
+                // Process each content one by one
+                contents.each(function(index) {
+                    const contentRow = $(this);
+                    const contentId = contentRow.attr('id').split('-')[2];
+                    const statusCell = contentRow.find('td:last-child');
+                    
+                    // Add delay between requests to avoid overwhelming the server
+                    setTimeout(() => {
+                        // Show processing status
+                        statusCell.html('<i class="fas fa-spinner fa-spin text-primary" title="Processing"></i>');
+                        
+                        $.ajax({
+                            url: `{{ route('statistic.refresh', ['campaignContent' => ':id']) }}`.replace(':id', contentId),
+                            method: 'GET',
+                            success: function() {
+                                statusCell.html('<i class="fas fa-check text-success" title="Completed"></i>');
+                            },
+                            error: function() {
+                                statusCell.html('<i class="fas fa-times text-danger" title="Failed"></i>');
+                            },
+                            complete: function() {
+                                completedContents++;
+                                updateBulkRefreshProgress(completedContents, totalContents);
+                                
+                                // If all completed
+                                if (completedContents === totalContents) {
+                                    setTimeout(() => {
+                                        window.contentTable.ajax.reload();
+                                        updateCard();
+                                        initChart();
+                                        ModalManager.hide('#bulkRefreshModal');
+                                        CampaignUtils.showToast(`Bulk refresh completed! (${completedContents}/${totalContents})`);
+                                    }, 1000);
+                                }
+                            }
+                        });
+                    }, index * 2000); // 2 second delay between each request
+                });
+            });
+
+            function updateBulkRefreshProgress(completed, total) {
+                const progressPercentage = Math.round((completed / total) * 100);
+                $('#bulkRefreshProgressBar')
+                    .css('width', progressPercentage + '%')
+                    .attr('aria-valuenow', progressPercentage)
+                    .text(progressPercentage + '%');
+            }
 
             // ===== MANUAL STATISTICS =====
             
@@ -305,13 +367,16 @@
                 const rowData = TableManager.getRowData(window.contentTable, this);
                 if (!rowData) return;
 
-                // Update basic info
+                // Update basic info with proper formatting
                 $('#likeModal').text(CampaignUtils.formatNumber(rowData.like));
                 $('#viewModal').text(CampaignUtils.formatNumber(rowData.view));
                 $('#commentModal').text(CampaignUtils.formatNumber(rowData.comment));
                 $('#rateCardModal').text(rowData.rate_card_formatted || '0');
                 $('#kodeAdsModal').text(rowData.kode_ads || '-');
-                $('#uploadDateModal').text(rowData.upload_date || 'Not posted yet');
+                $('#uploadDateModal').text(rowData.upload_date ? 
+                    new Date(rowData.upload_date).toLocaleDateString('en-US', { 
+                        year: 'numeric', month: 'short', day: 'numeric' 
+                    }) : 'Not posted yet');
 
                 // Load content embed
                 loadContentEmbed(rowData.link, rowData.channel);
@@ -423,6 +488,10 @@
                     },
                     error: function(xhr, status, error) {
                         console.error('Error fetching detail chart:', xhr.responseText);
+                        // Show error in chart area
+                        $('#statisticDetailChart').closest('.card-body').html(
+                            '<p class="text-muted text-center">No statistics data available for this content.</p>'
+                        );
                     }
                 });
             }
@@ -432,28 +501,36 @@
                     window.statisticDetailChart.destroy();
                 }
 
-                const ctx = document.getElementById('statisticDetailChart').getContext('2d');
-                window.statisticDetailChart = new Chart(ctx, {
+                const ctx = document.getElementById('statisticDetailChart');
+                if (!ctx) return;
+                
+                const context = ctx.getContext('2d');
+                
+                window.statisticDetailChart = new Chart(context, {
                     type: 'line',
                     data: {
-                        labels: chartData.map(data => data.date),
+                        labels: chartData.map(data => {
+                            // Format date properly
+                            const date = new Date(data.date);
+                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        }),
                         datasets: [{
                             label: 'Views',
-                            data: chartData.map(data => data.view || 0),
+                            data: chartData.map(data => parseInt(data.view) || 0),
                             backgroundColor: 'rgba(54, 162, 235, 0.2)',
                             borderColor: 'rgba(54, 162, 235, 1)',
                             fill: false,
                             tension: 0.1
                         }, {
                             label: 'Likes',
-                            data: chartData.map(data => data.like || 0),
+                            data: chartData.map(data => parseInt(data.like) || 0),
                             backgroundColor: 'rgba(255, 99, 132, 0.2)',
                             borderColor: 'rgba(255, 99, 132, 1)',
                             fill: false,
                             tension: 0.1
                         }, {
                             label: 'Comments',
-                            data: chartData.map(data => data.comment || 0),
+                            data: chartData.map(data => parseInt(data.comment) || 0),
                             backgroundColor: 'rgba(255, 206, 86, 0.2)',
                             borderColor: 'rgba(255, 206, 86, 1)',
                             fill: false,
@@ -467,11 +544,26 @@
                             title: {
                                 display: true,
                                 text: 'Content Statistics Over Time'
+                            },
+                            legend: {
+                                display: true,
+                                position: 'top'
                             }
                         },
                         scales: {
-                            x: { title: { display: true, text: 'Date' }},
-                            y: { title: { display: true, text: 'Count' }, beginAtZero: true }
+                            x: { 
+                                title: { display: true, text: 'Date' },
+                                grid: { display: false }
+                            },
+                            y: { 
+                                title: { display: true, text: 'Count' }, 
+                                beginAtZero: true,
+                                grid: { color: 'rgba(0,0,0,0.1)' }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
                         }
                     }
                 });
@@ -547,29 +639,65 @@
         function loadContentEmbed(link, channel) {
             const embedContainer = $('#contentEmbed');
             
-            if (!link) {
-                embedContainer.html('<p class="text-muted">No content link provided</p>');
+            if (!link || link === 'N/A') {
+                embedContainer.html('<div class="text-center p-4"><p class="text-muted">No content link provided</p></div>');
                 return;
             }
+            
+            // Show loading state
+            embedContainer.html('<div class="text-center p-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Loading content...</p></div>');
             
             switch (channel) {
                 case 'twitter_post':
                     const twitterLink = link.replace('https://x.com/', 'https://twitter.com/');
-                    embedContainer.html(`<blockquote class="twitter-tweet"><a href="${twitterLink}"></a></blockquote>`);
+                    embedContainer.html(`
+                        <blockquote class="twitter-tweet" data-theme="light">
+                            <a href="${twitterLink}"></a>
+                        </blockquote>
+                    `);
+                    // Load Twitter widget if available
                     if (typeof twttr !== 'undefined') {
                         twttr.widgets.load(embedContainer[0]);
+                    } else {
+                        // Fallback to link button
+                        setTimeout(() => {
+                            embedContainer.html(`
+                                <div class="text-center p-4">
+                                    <a href="${twitterLink}" target="_blank" class="btn btn-primary">
+                                        <i class="fab fa-twitter"></i> View Tweet
+                                    </a>
+                                </div>
+                            `);
+                        }, 2000);
                     }
                     break;
                     
                 case 'tiktok_video':
-                    embedContainer.html('<div class="text-center"><div class="spinner-border"></div></div>');
+                    // Try TikTok embed API
                     $.ajax({
                         url: `https://www.tiktok.com/oembed?url=${encodeURIComponent(link)}`,
+                        timeout: 5000,
                         success: function(response) {
-                            embedContainer.html(response.html);
+                            if (response.html) {
+                                embedContainer.html(`<div class="text-center">${response.html}</div>`);
+                            } else {
+                                embedContainer.html(`
+                                    <div class="text-center p-4">
+                                        <a href="${link}" target="_blank" class="btn btn-dark">
+                                            <i class="fab fa-tiktok"></i> View TikTok Video
+                                        </a>
+                                    </div>
+                                `);
+                            }
                         },
                         error: function() {
-                            embedContainer.html(`<a href="${link}" target="_blank" class="btn btn-primary">View TikTok Video</a>`);
+                            embedContainer.html(`
+                                <div class="text-center p-4">
+                                    <a href="${link}" target="_blank" class="btn btn-dark">
+                                        <i class="fab fa-tiktok"></i> View TikTok Video
+                                    </a>
+                                </div>
+                            `);
                         }
                     });
                     break;
@@ -577,20 +705,64 @@
                 case 'instagram_feed':
                     const cleanLink = link.split('?')[0];
                     const embedLink = cleanLink.endsWith('/') ? cleanLink + 'embed' : cleanLink + '/embed';
-                    embedContainer.html(`<iframe width="315" height="560" src="${embedLink}" frameborder="0"></iframe>`);
+                    embedContainer.html(`
+                        <div class="text-center">
+                            <iframe width="100%" height="500" src="${embedLink}" 
+                                    frameborder="0" scrolling="no" allowtransparency="true"
+                                    style="max-width: 400px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            </iframe>
+                        </div>
+                    `);
+                    
+                    // Check if iframe loads successfully
+                    setTimeout(() => {
+                        const iframe = embedContainer.find('iframe');
+                        iframe.on('error load', function() {
+                            if (this.contentDocument && this.contentDocument.title === '') {
+                                embedContainer.html(`
+                                    <div class="text-center p-4">
+                                        <a href="${link}" target="_blank" class="btn btn-gradient">
+                                            <i class="fab fa-instagram"></i> View Instagram Post
+                                        </a>
+                                    </div>
+                                `);
+                            }
+                        });
+                    }, 3000);
                     break;
                     
                 case 'youtube_video':
-                    const videoId = link.split('/').pop();
-                    embedContainer.html(`<iframe width="315" height="560" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`);
+                    const videoId = link.split('/').pop().split('?')[0];
+                    embedContainer.html(`
+                        <div class="text-center">
+                            <iframe width="100%" height="350" 
+                                    src="https://www.youtube.com/embed/${videoId}" 
+                                    frameborder="0" allowfullscreen
+                                    style="max-width: 400px; border-radius: 8px;">
+                            </iframe>
+                        </div>
+                    `);
                     break;
                     
                 case 'shopee_video':
-                    embedContainer.html(`<iframe src="${link}" width="315" height="560" frameborder="0" allowfullscreen></iframe>`);
+                    embedContainer.html(`
+                        <div class="text-center">
+                            <iframe src="${link}" width="100%" height="500" 
+                                    frameborder="0" allowfullscreen
+                                    style="max-width: 400px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                            </iframe>
+                        </div>
+                    `);
                     break;
                     
                 default:
-                    embedContainer.html(`<a href="${link}" target="_blank" class="btn btn-primary">View Content</a>`);
+                    embedContainer.html(`
+                        <div class="text-center p-4">
+                            <a href="${link}" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-external-link-alt"></i> View Content
+                            </a>
+                        </div>
+                    `);
                     break;
             }
         }

@@ -10,7 +10,8 @@ use App\DomainUtils\BaseBLL\BaseBLL;
 use App\DomainUtils\BaseBLL\BaseBLLFileUtils;
 use Auth;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
 
@@ -34,15 +35,25 @@ class TenantBLL extends BaseBLL implements TenantBLLInterface
     }
 
     /**
-     * Return all tenants
+     * Return all tenants - Fixed to return proper format for dropdowns
      */
     public function getAllTenants(): Collection
     {
         if (Auth::user()->hasRole(RoleEnum::SuperAdmin)) {
-            return $this->tenantDAL->getAllTenants();
+            return $this->tenantDAL->getAllTenants()->map(function ($tenant) {
+                return [
+                    'id' => $tenant->id,
+                    'name' => $tenant->name,
+                ];
+            });
         }
 
-        return Auth::user()->tenants()->get();
+        return Auth::user()->tenants()->get()->map(function ($tenant) {
+            return [
+                'id' => $tenant->id,
+                'name' => $tenant->name,
+            ];
+        });
     }
 
     /**

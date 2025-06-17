@@ -305,3 +305,52 @@
 /* Fix for z-index issues */
 .modal { z-index: 1055; }
 .modal-backdrop { z-index: 1050; }
+
+
+/* ===== BULK REFRESH MODAL ENHANCEMENTS ===== */
+#bulkRefreshContentList tr {
+    transition: background-color 0.3s ease;
+}
+
+#bulkRefreshContentList tr:hover {
+    background-color: #f8fafc;
+}
+
+.progress {
+    height: 1.5rem;
+    border-radius: 0.75rem;
+    background-color: #e2e8f0;
+}
+
+.progress-bar {
+    border-radius: 0.75rem;
+    background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+    transition: width 0.5s ease;
+}
+
+/* ===== EMBED CONTAINER ENHANCEMENTS ===== */
+#contentEmbed {
+    min-height: 200px;
+    background: #f8fafc;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+}
+
+#contentEmbed iframe {
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== CHART CONTAINER ===== */
+#statisticDetailChart {
+    height: 300px !important;
+}
+
+.chart-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: #6b7280;
+}

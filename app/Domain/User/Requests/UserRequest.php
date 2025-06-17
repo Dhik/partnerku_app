@@ -17,9 +17,9 @@ class UserRequest extends FormRequest
         // Get the current authenticated user
         $currentUser = auth()->user();
 
-        if ($currentUser->hasRole(RoleEnum::BrandManager)) {
+        if ($currentUser->hasRole(RoleEnum::SuperAdmin)) {
             // Define the roles that should not be allowed for creation
-            $forbiddenRoles = [RoleEnum::SuperAdmin, RoleEnum::BrandManager];
+            $forbiddenRoles = [RoleEnum::SuperAdmin];
 
             // Check if any forbidden role exists in the input roles array
             if (count(array_intersect($this->input('roles', []), $forbiddenRoles)) > 0) {

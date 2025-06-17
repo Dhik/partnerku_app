@@ -18,8 +18,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\DataTables;
-use App\Domain\Employee\Models\Employee;
-use App\Domain\Employee\Models\Shift;
 
 class UserController extends Controller
 {
@@ -85,48 +83,34 @@ class UserController extends Controller
 
         $roles = $this->userBLL->getAllRoles();
         $tenants = $this->tenantBLL->getAllTenants();
-        $shifts = Shift::all(); // Fetch all shifts
-
-        return view('admin.user.create', compact('roles', 'tenants', 'shifts'));
+        
+        // Debug: Check what we're getting
+        \Log::info('UserController@create - Roles:', $roles->toArray());
+        \Log::info('UserController@create - Tenants:', $tenants->toArray());
+        
+        // Convert to arrays if they're not already (for consistency)
+        $roles = $roles->toArray();
+        $tenants = $tenants->toArray();
+        
+        return view('admin.user.create', compact('roles', 'tenants'));
     }
 
     /**
      * Store a newly created resource in storage.
      */
     public function store(UserRequest $request): RedirectResponse
-{
-    $this->authorize(PermissionEnum::CreateUser, User::class);
+    {
+        $this->authorize(PermissionEnum::CreateUser, User::class);
 
-    $user = $this->userBLL->createUser($request);
+        $user = $this->userBLL->createUser($request);
 
-    // Create employee
-    $employeeData = [
-        'employee_id' => $request->employee_id,
-        'full_name' => $request->name,
-        'job_position' => $request->position,
-        'job_level' => $request->job_level,
-        'organization' => $request->organization,
-        'join_date' => $request->join_date,
-        'status_employee' => $request->status_employee,
-        'birth_date' => $request->birth_date,
-        'birth_place' => $request->birth_place,
-        'age' => $request->age,
-        'citizen_id_address' => $request->citizen_id_address,
-        'residential_address' => $request->residential_address,
-        'email' => $request->email,
-        'mobile_phone' => $request->phone_number,
-        'shift_id' => $request->shift_id,
-    ];
-
-    $this->employeeBLL->createEmployee($employeeData);
-
-    return redirect()
-        ->route('users.show', $user->id)
-        ->with([
-            'alert' => 'success',
-            'message' => trans('messages.success_save', ['model' => trans('labels.user')]),
-        ]);
-}
+        return redirect()
+            ->route('users.show', $user->id)
+            ->with([
+                'alert' => 'success',
+                'message' => trans('messages.success_save', ['model' => trans('labels.user')]),
+            ]);
+    }
 
 
     /**

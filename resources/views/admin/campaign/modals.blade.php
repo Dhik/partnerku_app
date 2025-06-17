@@ -278,3 +278,45 @@
         </div>
     </div>
 </div>
+
+{{-- Bulk Refresh Modal --}}
+<div class="modal fade" id="bulkRefreshModal" tabindex="-1" aria-hidden="true" data-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Refresh Statistics</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <p class="text-muted">Content to be refreshed:</p>
+                </div>
+                <div class="table-responsive" style="max-height: 300px;">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Influencer</th>
+                                <th>Platform</th>
+                                <th>Product</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bulkRefreshContentList">
+                            <!-- Content will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="progress mt-3">
+                    <div id="bulkRefreshProgressBar" class="progress-bar" role="progressbar" 
+                         style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="confirmBulkRefresh">Start Refresh</button>
+            </div>
+        </div>
+    </div>
+</div>
