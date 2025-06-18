@@ -84,10 +84,6 @@ class UserController extends Controller
         $roles = $this->userBLL->getAllRoles();
         $tenants = $this->tenantBLL->getAllTenants();
         
-        // Debug: Check what we're getting
-        \Log::info('UserController@create - Roles:', $roles->toArray());
-        \Log::info('UserController@create - Tenants:', $tenants->toArray());
-        
         // Convert to arrays if they're not already (for consistency)
         $roles = $roles->toArray();
         $tenants = $tenants->toArray();

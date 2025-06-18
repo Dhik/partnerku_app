@@ -9,6 +9,7 @@ use App\Domain\Income\Requests\IncomeRequest;
 use Illuminate\Http\Request;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\JsonResponse;
+use App\Domain\User\Models\User;
 
 /**
  * @property IncomeBLLInterface incomeBLL
@@ -25,17 +26,31 @@ class IncomeController extends Controller
      */
     public function index()
     {
-        return view('admin.income.index');
-    }
+        try {
+            // Get all users for the team selection dropdown
+            $users = User::select('id', 'name', 'position', 'email')
+                ->whereNotNull('email_verified_at') // Only verified users
+                ->orderBy('name')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name . ($user->position ? ' (' . $user->position . ')' : ''),
+                        'email' => $user->email,
+                        'position' => $user->position
+                    ];
+                });
 
-    /**
-     * Get users for dropdown
-     */
-    public function getUsers()
-    {
-        // Assuming you have a User model, adjust the query as needed
-        $users = \App\Models\User::select('id', 'name')->get();
-        return response()->json($users);
+            return view('admin.income.index', compact('users'));
+        } catch (\Exception $e) {
+            \Log::error('Error loading users for income index:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Return view with empty users array if there's an error
+            return view('admin.income.index', ['users' => []]);
+        }
     }
 
     /**
@@ -43,35 +58,84 @@ class IncomeController extends Controller
      */
     public function data()
     {
-        $incomes = Income::all();
-        return DataTables::of($incomes)
-            ->addColumn('actions', function ($income) {
-                return '
-                    <button type="button" class="btn btn-sm btn-primary" onclick="showIncome(' . $income->id . ')">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-success" onclick="editIncome(' . $income->id . ')">
-                        <i class="fas fa-pencil-alt"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="deleteIncome(' . $income->id . ')">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                ';
+        try {
+            // Use query builder for better performance
+            $incomes = Income::query();
+            
+            return DataTables::of($incomes)
+                ->addColumn('actions', function ($income) {
+                    return '
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="showIncome(' . $income->id . ')" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-success" onclick="editIncome(' . $income->id . ')" title="Edit">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteIncome(' . $income->id . ')" title="Delete">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    ';
+                })
+                ->editColumn('revenue_contract', function ($income) {
+                    return 'Rp ' . number_format($income->revenue_contract, 0, ',', '.');
+                })
+                ->editColumn('team_in_charge', function ($income) {
+                    return $this->formatTeamMembers($income->team_in_charge);
+                })
+                ->rawColumns(['actions'])
+                ->make(true);
+        } catch (\Exception $e) {
+            \Log::error('Error loading income data:', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Failed to load data'
+            ], 500);
+        }
+    }
+
+    /**
+     * Format team members for display in DataTable
+     */
+    private function formatTeamMembers($teamInCharge)
+    {
+        if (empty($teamInCharge)) {
+            return '<span class="text-muted">No team assigned</span>';
+        }
+
+        // Normalize the data to array
+        $userIds = $this->normalizeTeamInCharge($teamInCharge);
+
+        if (empty($userIds)) {
+            return '<span class="text-muted">No team assigned</span>';
+        }
+
+        // Get user names with positions
+        $users = User::whereIn('id', $userIds)
+            ->select('name', 'position')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($user) {
+                return $user->name . ($user->position ? ' (' . $user->position . ')' : '');
             })
-            ->editColumn('revenue_contract', function ($income) {
-                return 'Rp ' . number_format($income->revenue_contract, 2, ',', '.');
-            })
-            ->editColumn('team_in_charge', function ($income) {
-                // Display team members as comma-separated names
-                if (is_array($income->team_in_charge)) {
-                    $userIds = $income->team_in_charge;
-                    $users = \App\Models\User::whereIn('id', $userIds)->pluck('name')->toArray();
-                    return implode(', ', $users);
-                }
-                return $income->team_in_charge;
-            })
-            ->rawColumns(['actions'])
-            ->make(true);
+            ->toArray();
+
+        if (empty($users)) {
+            return '<span class="text-warning">Unknown users</span>';
+        }
+
+        // Limit display to avoid clutter in table
+        if (count($users) > 3) {
+            $displayUsers = array_slice($users, 0, 3);
+            $remaining = count($users) - 3;
+            return implode(', ', $displayUsers) . ' <small class="text-muted">+' . $remaining . ' more</small>';
+        }
+
+        return implode(', ', $users);
     }
 
     /**
@@ -90,27 +154,28 @@ class IncomeController extends Controller
         try {
             $validatedData = $request->validated();
             
-            // Convert team_in_charge array to JSON if it's an array
-            if (isset($validatedData['team_in_charge']) && is_array($validatedData['team_in_charge'])) {
-                $validatedData['team_in_charge'] = $validatedData['team_in_charge'];
-            } elseif (isset($validatedData['team_in_charge'])) {
-                // If it's a single value, convert to array
-                $validatedData['team_in_charge'] = [$validatedData['team_in_charge']];
-            }
+            // Process team_in_charge data
+            $validatedData['team_in_charge'] = $this->processTeamInCharge($validatedData['team_in_charge'] ?? []);
             
-            // Debug: Log the data being saved
-            \Log::info('Income data to be saved:', $validatedData);
+            // Log the data being saved for debugging
+            \Log::info('Creating new income:', [
+                'data' => $validatedData,
+                'user_id' => auth()->id()
+            ]);
             
-            Income::create($validatedData);
+            $income = Income::create($validatedData);
             
             return response()->json([
                 'success' => true,
-                'message' => 'Income created successfully!'
+                'message' => 'Income created successfully!',
+                'data' => $income
             ]);
         } catch (\Exception $e) {
             \Log::error('Income creation error:', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+                'user_id' => auth()->id()
             ]);
             
             return response()->json([
@@ -125,18 +190,29 @@ class IncomeController extends Controller
      */
     public function show(Income $income)
     {
-        // Get user names for team_in_charge display
-        $teamMembers = [];
-        if (is_array($income->team_in_charge)) {
-            $teamMembers = \App\Models\User::whereIn('id', $income->team_in_charge)->pluck('name')->toArray();
+        try {
+            // Get detailed team member information
+            $teamMembers = $this->getDetailedTeamMembers($income->team_in_charge);
+            
+            $incomeData = $income->toArray();
+            $incomeData['team_members_names'] = array_column($teamMembers, 'display_name');
+            $incomeData['team_members_details'] = $teamMembers;
+            
+            return response()->json([
+                'success' => true,
+                'data' => $incomeData
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error showing income:', [
+                'income_id' => $income->id,
+                'message' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading income details'
+            ], 500);
         }
-        
-        $income->team_members_names = $teamMembers;
-        
-        return response()->json([
-            'success' => true,
-            'data' => $income
-        ]);
     }
 
     /**
@@ -144,10 +220,27 @@ class IncomeController extends Controller
      */
     public function edit(Income $income)
     {
-        return response()->json([
-            'success' => true,
-            'data' => $income
-        ]);
+        try {
+            $incomeData = $income->toArray();
+            
+            // Ensure team_in_charge is always an array of strings for the frontend
+            $incomeData['team_in_charge'] = array_map('strval', $this->normalizeTeamInCharge($income->team_in_charge));
+            
+            return response()->json([
+                'success' => true,
+                'data' => $incomeData
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error editing income:', [
+                'income_id' => $income->id,
+                'message' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading income for editing'
+            ], 500);
+        }
     }
 
     /**
@@ -158,27 +251,31 @@ class IncomeController extends Controller
         try {
             $validatedData = $request->validated();
             
-            // Convert team_in_charge array to JSON if it's an array
-            if (isset($validatedData['team_in_charge']) && is_array($validatedData['team_in_charge'])) {
-                $validatedData['team_in_charge'] = $validatedData['team_in_charge'];
-            } elseif (isset($validatedData['team_in_charge'])) {
-                // If it's a single value, convert to array
-                $validatedData['team_in_charge'] = [$validatedData['team_in_charge']];
-            }
+            // Process team_in_charge data
+            $validatedData['team_in_charge'] = $this->processTeamInCharge($validatedData['team_in_charge'] ?? []);
             
-            // Debug: Log the data being updated
-            \Log::info('Income data to be updated:', $validatedData);
+            // Log the update for debugging
+            \Log::info('Updating income:', [
+                'income_id' => $income->id,
+                'old_data' => $income->toArray(),
+                'new_data' => $validatedData,
+                'user_id' => auth()->id()
+            ]);
             
             $income->update($validatedData);
             
             return response()->json([
                 'success' => true,
-                'message' => 'Income updated successfully!'
+                'message' => 'Income updated successfully!',
+                'data' => $income->fresh()
             ]);
         } catch (\Exception $e) {
             \Log::error('Income update error:', [
+                'income_id' => $income->id,
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+                'user_id' => auth()->id()
             ]);
             
             return response()->json([
@@ -194,16 +291,125 @@ class IncomeController extends Controller
     public function destroy(Income $income)
     {
         try {
+            $incomeId = $income->id;
+            $incomeData = $income->toArray(); // Store for logging
+            
             $income->delete();
+            
+            \Log::info('Income deleted successfully:', [
+                'income_id' => $incomeId,
+                'deleted_data' => $incomeData,
+                'user_id' => auth()->id()
+            ]);
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Income deleted successfully!'
             ]);
         } catch (\Exception $e) {
+            \Log::error('Income deletion error:', [
+                'income_id' => $income->id,
+                'message' => $e->getMessage(),
+                'user_id' => auth()->id()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error deleting income: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Process team_in_charge data for storage
+     */
+    private function processTeamInCharge($teamInCharge)
+    {
+        if (empty($teamInCharge)) {
+            return [];
+        }
+
+        // Handle different input types
+        if (is_string($teamInCharge)) {
+            // If it's a JSON string, decode it
+            $decoded = json_decode($teamInCharge, true);
+            $teamInCharge = is_array($decoded) ? $decoded : [$teamInCharge];
+        } elseif (!is_array($teamInCharge)) {
+            // If it's a single value, convert to array
+            $teamInCharge = [$teamInCharge];
+        }
+
+        // Filter out empty values and ensure they're integers
+        $teamInCharge = array_filter(array_map('intval', array_filter($teamInCharge)));
+
+        if (empty($teamInCharge)) {
+            return [];
+        }
+
+        // Validate that all user IDs exist in the users table
+        $validUserIds = User::whereIn('id', $teamInCharge)
+            ->whereNotNull('email_verified_at') // Only verified users
+            ->pluck('id')
+            ->toArray();
+
+        if (count($validUserIds) !== count($teamInCharge)) {
+            $invalidIds = array_diff($teamInCharge, $validUserIds);
+            \Log::warning('Invalid or unverified user IDs provided for team_in_charge:', [
+                'invalid_ids' => $invalidIds,
+                'valid_ids' => $validUserIds,
+                'submitted_ids' => $teamInCharge
+            ]);
+        }
+
+        return array_values($validUserIds); // Return only valid user IDs
+    }
+
+    /**
+     * Normalize team_in_charge to always return an array
+     */
+    private function normalizeTeamInCharge($teamInCharge)
+    {
+        if (empty($teamInCharge)) {
+            return [];
+        }
+
+        if (is_string($teamInCharge)) {
+            $decoded = json_decode($teamInCharge, true);
+            return is_array($decoded) ? array_map('intval', $decoded) : [intval($teamInCharge)];
+        }
+
+        if (is_array($teamInCharge)) {
+            return array_map('intval', array_filter($teamInCharge));
+        }
+
+        return [intval($teamInCharge)];
+    }
+
+    /**
+     * Get detailed team member information
+     */
+    private function getDetailedTeamMembers($teamInCharge)
+    {
+        $userIds = $this->normalizeTeamInCharge($teamInCharge);
+        
+        if (empty($userIds)) {
+            return [];
+        }
+
+        return User::whereIn('id', $userIds)
+            ->select('id', 'name', 'email', 'position', 'phone_number')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'position' => $user->position,
+                    'phone_number' => $user->phone_number,
+                    'display_name' => $user->name . ($user->position ? ' (' . $user->position . ')' : '')
+                ];
+            })
+            ->toArray();
     }
 }

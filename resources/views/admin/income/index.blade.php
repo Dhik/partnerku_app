@@ -63,8 +63,8 @@
                         <input type="text" class="form-control" id="service" name="service" required>
                     </div>
                     <div class="form-group">
-                        <label for="team_in_charge">Team In Charge</label>
-                        <select class="form-control select2" id="team_in_charge" name="team_in_charge[]" multiple required>
+                        <label for="team_in_charge">Team In Charge <span class="required">*</span></label>
+                        <select class="form-control" id="team_in_charge" name="team_in_charge[]" multiple required style="display: none !important;">
                             <!-- Options will be loaded via AJAX -->
                         </select>
                         <small class="form-text text-muted">Select multiple team members</small>
@@ -122,8 +122,176 @@
 @section('css')
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap4.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css">
+    <style>
+    .required {
+        color: #dc2626;
+    }
+
+    /* Hide original select elements */
+    #team_in_charge {
+        display: none !important;
+    }
+
+    /* Custom Multi-Select Styles */
+    .custom-multiselect {
+        position: relative;
+        width: 100%;
+    }
+
+    .multiselect-container {
+        position: relative;
+    }
+
+    .multiselect-input-container {
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        background-color: #fff;
+        min-height: 38px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.25rem;
+        cursor: pointer;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    .multiselect-input-container:hover {
+        border-color: #86b7fe;
+    }
+
+    .multiselect-input-container.active {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .selected-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        flex: 1;
+    }
+
+    .selected-item {
+        background-color: #1e3a8a;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .selected-item .remove-item {
+        cursor: pointer;
+        font-size: 0.75rem;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+
+    .selected-item .remove-item:hover {
+        opacity: 1;
+    }
+
+    .multiselect-search {
+        border: none;
+        outline: none;
+        padding: 0.25rem;
+        flex: 1;
+        min-width: 100px;
+        background: transparent;
+    }
+
+    .multiselect-search::placeholder {
+        color: #6c757d;
+    }
+
+    .multiselect-arrow {
+        color: #6c757d;
+        transition: transform 0.2s;
+        margin-left: 0.5rem;
+    }
+
+    .multiselect-input-container.active .multiselect-arrow {
+        transform: rotate(180deg);
+    }
+
+    .multiselect-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ced4da;
+        border-top: none;
+        border-radius: 0 0 0.375rem 0.375rem;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .multiselect-dropdown.show {
+        display: block;
+    }
+
+    .multiselect-options {
+        padding: 0.25rem 0;
+    }
+
+    .multiselect-option {
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: background-color 0.2s;
+    }
+
+    .multiselect-option:hover {
+        background-color: #f8f9fa;
+    }
+
+    .multiselect-option.selected {
+        background-color: #e3f2fd;
+        color: #1e3a8a;
+    }
+
+    .multiselect-option .option-check {
+        display: none;
+        color: #1e3a8a;
+    }
+
+    .multiselect-option.selected .option-check {
+        display: block;
+    }
+
+    .multiselect-option.hidden {
+        display: none;
+    }
+
+    /* No results message */
+    .no-results {
+        padding: 0.75rem;
+        text-align: center;
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    /* Responsive */
+    @media (max-width: 576px) {
+        .multiselect-search {
+            min-width: 80px;
+        }
+        
+        .selected-item {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.4rem;
+        }
+    }
+    </style>
 @stop
 
 @section('js')
@@ -131,9 +299,258 @@
 <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap4.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
 <script>
+class CustomMultiSelect {
+    constructor(element) {
+        this.element = element;
+        this.name = element.getAttribute('data-name');
+        this.placeholder = element.getAttribute('data-placeholder');
+        this.container = element.querySelector('.multiselect-input-container');
+        this.searchInput = element.querySelector('.multiselect-search');
+        this.dropdown = element.querySelector('.multiselect-dropdown');
+        this.selectedItemsContainer = element.querySelector('.selected-items');
+        this.hiddenInputsContainer = element.querySelector('.multiselect-hidden-inputs');
+        this.arrow = element.querySelector('.multiselect-arrow');
+        this.options = Array.from(element.querySelectorAll('.multiselect-option'));
+        this.selectedValues = [];
+        
+        this.init();
+    }
+    
+    init() {
+        this.bindEvents();
+        this.updatePlaceholder();
+    }
+    
+    bindEvents() {
+        // Toggle dropdown
+        this.container.addEventListener('click', (e) => {
+            if (e.target !== this.searchInput) {
+                this.toggleDropdown();
+            }
+        });
+        
+        // Search functionality
+        this.searchInput.addEventListener('input', (e) => {
+            this.filterOptions(e.target.value);
+        });
+        
+        this.searchInput.addEventListener('focus', () => {
+            this.openDropdown();
+        });
+        
+        // Option selection
+        this.options.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleOption(option);
+            });
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!this.element.contains(e.target)) {
+                this.closeDropdown();
+            }
+        });
+        
+        // Keyboard navigation
+        this.searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeDropdown();
+            }
+        });
+    }
+    
+    toggleDropdown() {
+        if (this.dropdown.classList.contains('show')) {
+            this.closeDropdown();
+        } else {
+            this.openDropdown();
+        }
+    }
+    
+    openDropdown() {
+        this.dropdown.classList.add('show');
+        this.container.classList.add('active');
+        this.searchInput.focus();
+    }
+    
+    closeDropdown() {
+        this.dropdown.classList.remove('show');
+        this.container.classList.remove('active');
+        this.searchInput.value = '';
+        this.filterOptions('');
+    }
+    
+    toggleOption(option) {
+        const value = option.getAttribute('data-value');
+        const text = option.getAttribute('data-text');
+        
+        if (this.selectedValues.includes(value)) {
+            this.removeValue(value);
+        } else {
+            this.addValue(value, text);
+        }
+        
+        this.updateDisplay();
+        this.searchInput.focus();
+    }
+    
+    addValue(value, text) {
+        if (!this.selectedValues.includes(value)) {
+            this.selectedValues.push(value);
+            this.createSelectedItem(value, text);
+            this.createHiddenInput(value);
+            this.updateOptionState(value, true);
+        }
+    }
+    
+    removeValue(value) {
+        const index = this.selectedValues.indexOf(value);
+        if (index > -1) {
+            this.selectedValues.splice(index, 1);
+            this.removeSelectedItem(value);
+            this.removeHiddenInput(value);
+            this.updateOptionState(value, false);
+        }
+    }
+    
+    createSelectedItem(value, text) {
+        const item = document.createElement('div');
+        item.className = 'selected-item';
+        item.setAttribute('data-value', value);
+        item.innerHTML = `
+            <span>${text}</span>
+            <i class="fas fa-times remove-item" data-value="${value}"></i>
+        `;
+        
+        // Add remove functionality
+        item.querySelector('.remove-item').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.removeValue(value);
+            this.updateDisplay();
+        });
+        
+        this.selectedItemsContainer.appendChild(item);
+    }
+    
+    removeSelectedItem(value) {
+        const item = this.selectedItemsContainer.querySelector(`[data-value="${value}"]`);
+        if (item) {
+            item.remove();
+        }
+    }
+    
+    createHiddenInput(value) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = `${this.name}[]`;
+        input.value = value;
+        input.setAttribute('data-value', value);
+        this.hiddenInputsContainer.appendChild(input);
+    }
+    
+    removeHiddenInput(value) {
+        const input = this.hiddenInputsContainer.querySelector(`[data-value="${value}"]`);
+        if (input) {
+            input.remove();
+        }
+    }
+    
+    updateOptionState(value, selected) {
+        const option = this.options.find(opt => opt.getAttribute('data-value') === value);
+        if (option) {
+            if (selected) {
+                option.classList.add('selected');
+            } else {
+                option.classList.remove('selected');
+            }
+        }
+    }
+    
+    updateDisplay() {
+        this.updatePlaceholder();
+    }
+    
+    updatePlaceholder() {
+        if (this.selectedValues.length === 0) {
+            this.searchInput.placeholder = this.placeholder;
+            this.searchInput.style.display = 'block';
+        } else {
+            this.searchInput.placeholder = '';
+            this.searchInput.style.display = 'block';
+        }
+    }
+    
+    filterOptions(searchText) {
+        const text = searchText.toLowerCase();
+        let hasVisibleOptions = false;
+        
+        this.options.forEach(option => {
+            const optionText = option.getAttribute('data-text').toLowerCase();
+            if (optionText.includes(text)) {
+                option.classList.remove('hidden');
+                hasVisibleOptions = true;
+            } else {
+                option.classList.add('hidden');
+            }
+        });
+        
+        // Show/hide no results message
+        this.toggleNoResults(!hasVisibleOptions && searchText.length > 0);
+    }
+    
+    toggleNoResults(show) {
+        let noResultsDiv = this.dropdown.querySelector('.no-results');
+        
+        if (show && !noResultsDiv) {
+            noResultsDiv = document.createElement('div');
+            noResultsDiv.className = 'no-results';
+            noResultsDiv.textContent = 'No results found';
+            this.dropdown.querySelector('.multiselect-options').appendChild(noResultsDiv);
+        } else if (!show && noResultsDiv) {
+            noResultsDiv.remove();
+        }
+    }
+    
+    // Method to clear all selections
+    clearAll() {
+        this.selectedValues = [];
+        this.selectedItemsContainer.innerHTML = '';
+        this.hiddenInputsContainer.innerHTML = '';
+        this.options.forEach(option => {
+            option.classList.remove('selected');
+        });
+        this.updateDisplay();
+    }
+    
+    // Method to set values programmatically
+    setValues(values) {
+        this.clearAll();
+        values.forEach(value => {
+            const option = this.options.find(opt => opt.getAttribute('data-value') === value);
+            if (option) {
+                const text = option.getAttribute('data-text');
+                this.addValue(value, text);
+            }
+        });
+        this.updateDisplay();
+    }
+    
+    // Method to get selected values
+    getSelectedValues() {
+        return this.selectedValues;
+    }
+}
+
+let teamMultiSelect = null;
+
 $(document).ready(function() {
-    // Load users for dropdown
-    loadUsers();
+    // Users data is already available from the controller
+    const usersData = @json($users ?? []);
+    
+    // Initialize custom multiselect with users data
+    initializeCustomMultiSelect(usersData);
     
     // Initialize DataTable
     $('#incomeTable').DataTable({
@@ -154,8 +571,8 @@ $(document).ready(function() {
     $('#incomeForm').on('submit', function(e) {
         e.preventDefault();
         
-        // Get selected team members as array
-        let selectedTeam = $('#team_in_charge').val();
+        // Get selected team members from custom multiselect
+        let selectedTeam = teamMultiSelect ? teamMultiSelect.getSelectedValues() : [];
         
         // Get form data as object
         let formData = {
@@ -203,21 +620,54 @@ $(document).ready(function() {
     });
 });
 
-function loadUsers() {
-    $.ajax({
-        url: '{{ route("income.users") }}',
-        method: 'GET',
-        success: function(users) {
-            let options = '';
-            users.forEach(function(user) {
-                options += `<option value="${user.id}">${user.name}</option>`;
-            });
-            $('#team_in_charge').html(options);
-        },
-        error: function() {
-            console.log('Error loading users');
-        }
+function initializeCustomMultiSelect(users) {
+    const $select = $('#team_in_charge');
+    const $formGroup = $select.closest('.form-group');
+    
+    // Clear existing options and add users from controller
+    $select.empty();
+    users.forEach(function(user) {
+        $select.append(`<option value="${user.id}">${user.name}</option>`);
     });
+    
+    // Create custom multi-select HTML
+    let customMultiSelectHtml = `
+        <div class="custom-multiselect" data-name="team_in_charge" data-placeholder="Select team members...">
+            <div class="multiselect-container">
+                <div class="multiselect-input-container">
+                    <div class="selected-items"></div>
+                    <input type="text" class="multiselect-search" placeholder="Select team members..." autocomplete="off">
+                    <i class="fas fa-chevron-down multiselect-arrow"></i>
+                </div>
+                <div class="multiselect-dropdown">
+                    <div class="multiselect-options">
+    `;
+    
+    // Add options from users data
+    users.forEach(function(user) {
+        customMultiSelectHtml += `
+            <div class="multiselect-option" data-value="${user.id}" data-text="${user.name}">
+                <span class="option-text">${user.name}</span>
+                <i class="fas fa-check option-check"></i>
+            </div>
+        `;
+    });
+    
+    customMultiSelectHtml += `
+                    </div>
+                </div>
+            </div>
+            <!-- Hidden inputs for form submission -->
+            <div class="multiselect-hidden-inputs"></div>
+        </div>
+    `;
+    
+    // Insert the custom multi-select after the original select
+    $select.after(customMultiSelectHtml);
+    
+    // Initialize the custom multi-select
+    const customElement = $formGroup.find('.custom-multiselect')[0];
+    teamMultiSelect = new CustomMultiSelect(customElement);
 }
 
 function createIncome() {
@@ -238,9 +688,9 @@ function editIncome(id) {
                 $('#revenue_contract').val(data.revenue_contract);
                 $('#service').val(data.service);
                 
-                // Set selected team members
-                if (Array.isArray(data.team_in_charge)) {
-                    $('#team_in_charge').val(data.team_in_charge);
+                // Set selected team members using custom multiselect
+                if (Array.isArray(data.team_in_charge) && teamMultiSelect) {
+                    teamMultiSelect.setValues(data.team_in_charge.map(String));
                 }
                 
                 $('#incomeModalLabel').text('Edit Income');
@@ -318,7 +768,9 @@ function deleteIncome(id) {
 function resetForm() {
     $('#incomeForm')[0].reset();
     $('#incomeId').val('');
-    $('#team_in_charge').val([]).trigger('change');
+    if (teamMultiSelect) {
+        teamMultiSelect.clearAll();
+    }
 }
 
 function handleFormErrors(xhr) {
