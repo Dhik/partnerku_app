@@ -103,16 +103,20 @@ class PermissionTableSeeder extends Seeder
         $client1->givePermissionTo($kol);
         $client1->givePermissionTo($campaign);
         $client1->givePermissionTo($campaignContent);
+        $superadmin->givePermissionTo($profile);
 
         $client2 = Role::findByName(RoleEnum::Client2);
         $client2->givePermissionTo($campaign);
         $client2->givePermissionTo($campaignContent);
+        $superadmin->givePermissionTo($profile);
 
         $tim_internal = Role::findByName(RoleEnum::TimInternal);
         $tim_internal->givePermissionTo($kol);
+        $superadmin->givePermissionTo($profile);
 
         $tim_ads = Role::findByName(RoleEnum::TimAds);
         $tim_ads->givePermissionTo($campaign);
         $tim_ads->givePermissionTo($campaignContent);
+        $superadmin->givePermissionTo($profile);
     }
 }
