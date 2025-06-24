@@ -305,57 +305,73 @@ return [
                 PermissionEnum::ViewIncome,
                 PermissionEnum::ViewResult,
                 PermissionEnum::ViewOtherSpent,
+                PermissionEnum::ViewCampaign,
             ],
         ],
+        
+        // Financial Management (SuperAdmin only)
         [
             'text' => 'Income',
             'url' => 'admin/income',
             'icon' => 'nav-icon far fa-circle text-info',
-            'can' => [PermissionEnum::ViewUser],
+            'can' => [PermissionEnum::ViewIncome],
         ],
         [
             'text' => 'Payroll',
             'url' => 'admin/payroll',
             'icon' => 'nav-icon far fa-circle text-info',
-            'can' => [PermissionEnum::ViewUser],
+            'can' => [PermissionEnum::ViewPayroll],
         ],
         [
             'text' => 'Other Spent',
             'url' => 'admin/other_spent',
             'icon' => 'nav-icon far fa-circle text-info',
-            'can' => [PermissionEnum::ViewUser],
+            'can' => [PermissionEnum::ViewOtherSpent],
         ],
+        
+        // Campaign Management (All roles with different access levels)
         [
-            'text' => 'Campaign',
+            'text' => 'Campaign Management',
             'can' => [
                 PermissionEnum::ViewCampaign,
                 PermissionEnum::ViewKOL
             ],
-            'icon'    => 'fas fa-fw fa-map',
+            'icon' => 'fas fa-fw fa-bullhorn',
             'submenu' => [
                 [
-                    'text' => 'Campaign',
+                    'text' => 'Campaigns',
                     'url' => 'admin/campaign',
                     'icon' => 'nav-icon far fa-circle',
                     'can' => [PermissionEnum::ViewCampaign],
                     'active' => ['admin/campaign*']
                 ],
+                [
+                    'text' => 'Key Opinion Leaders',
+                    'url' => 'admin/kol',
+                    'icon' => 'nav-icon far fa-circle',
+                    'can' => [PermissionEnum::ViewKOL],
+                    'active' => ['admin/kol*']
+                ],
             ]
         ],
+        
+        // Master Data (SuperAdmin only)
         [
-            'text'    => 'Master Data',
-            'icon'    => 'fas fa-fw fa-database',
-            'can' => [PermissionEnum::ViewUser,
+            'text' => 'Master Data',
+            'icon' => 'fas fa-fw fa-database',
+            'can' => [
+                PermissionEnum::ViewUser,
+                PermissionEnum::ViewTenant,
             ],
             'submenu' => [
                 [
-                    'text' => 'Brand',
+                    'text' => 'Brands/Tenants',
                     'url' => '/admin/tenant',
                     'icon' => 'far fa-circle nav-icon',
                     'can' => [PermissionEnum::ViewTenant],
                 ],
                 [
-                    'text' => 'User',
+                    'text' => 'Users',
                     'url' => '/admin/users',
                     'icon' => 'far fa-circle nav-icon',
                     'can' => [PermissionEnum::ViewUser],
@@ -363,11 +379,26 @@ return [
                 ],
             ],
         ],
-       
-        
+
+        // Results & Reports (SuperAdmin and monitoring roles)
         [
-            'text'    => 'Account Settings',
-            'icon'    => 'fas fa-fw fa-user',
+            'text' => 'Reports',
+            'icon' => 'fas fa-fw fa-chart-bar',
+            'can' => [PermissionEnum::ViewResult],
+            'submenu' => [
+                [
+                    'text' => 'Campaign Results',
+                    'url' => 'admin/result',
+                    'icon' => 'nav-icon far fa-circle',
+                    'can' => [PermissionEnum::ViewResult],
+                ],
+            ],
+        ],
+        
+        // Account Settings (All users)
+        [
+            'text' => 'Account Settings',
+            'icon' => 'fas fa-fw fa-user',
             'can' => [PermissionEnum::ChangeOwnPassword],
             'submenu' => [
                 [
@@ -382,7 +413,6 @@ return [
                 ],
             ],
         ],
-        
     ],
 
     /*

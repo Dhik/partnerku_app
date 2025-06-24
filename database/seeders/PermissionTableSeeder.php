@@ -18,6 +18,7 @@ class PermissionTableSeeder extends Seeder
     {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
+        // User permissions
         $userPermissions = [
             Permission::updateOrCreate(['name' => PermissionEnum::CreateUser]),
             Permission::updateOrCreate(['name' => PermissionEnum::UpdateUser]),
@@ -25,6 +26,7 @@ class PermissionTableSeeder extends Seeder
             Permission::updateOrCreate(['name' => PermissionEnum::DeleteUser]),
         ];
 
+        // Payroll permissions
         $payrollPermissions = [
             Permission::updateOrCreate(['name' => PermissionEnum::CreatePayroll]),
             Permission::updateOrCreate(['name' => PermissionEnum::UpdatePayroll]),
@@ -32,6 +34,7 @@ class PermissionTableSeeder extends Seeder
             Permission::updateOrCreate(['name' => PermissionEnum::DeletePayroll]),
         ];
 
+        // Income permissions
         $incomePermissions = [
             Permission::updateOrCreate(['name' => PermissionEnum::CreateIncome]),
             Permission::updateOrCreate(['name' => PermissionEnum::UpdateIncome]),
@@ -39,6 +42,7 @@ class PermissionTableSeeder extends Seeder
             Permission::updateOrCreate(['name' => PermissionEnum::DeleteIncome]),
         ];
 
+        // Other Spent permissions
         $otherSpentPermissions = [
             Permission::updateOrCreate(['name' => PermissionEnum::CreateOtherSpent]),
             Permission::updateOrCreate(['name' => PermissionEnum::UpdateOtherSpent]),
@@ -46,12 +50,14 @@ class PermissionTableSeeder extends Seeder
             Permission::updateOrCreate(['name' => PermissionEnum::DeleteOtherSpent]),
         ];
 
-        $profile = [
+        // Profile permissions
+        $profilePermissions = [
             Permission::updateOrCreate(['name' => PermissionEnum::ViewProfile]),
             Permission::updateOrCreate(['name' => PermissionEnum::ChangeOwnPassword]),
         ];
 
-        $tenant = [
+        // Tenant permissions
+        $tenantPermissions = [
             Permission::updateOrCreate(['name' => PermissionEnum::ViewTenant]),
             Permission::updateOrCreate(['name' => PermissionEnum::CreateTenant]),
             Permission::updateOrCreate(['name' => PermissionEnum::UpdateTenant]),
@@ -59,6 +65,7 @@ class PermissionTableSeeder extends Seeder
             Permission::updateOrCreate(['name' => PermissionEnum::AssignTenantUser]),
         ];
 
+        // Result permissions
         $resultPermissions = [
             Permission::updateOrCreate(['name' => PermissionEnum::ViewResult]),
             Permission::updateOrCreate(['name' => PermissionEnum::CreateResult]),
@@ -66,57 +73,79 @@ class PermissionTableSeeder extends Seeder
             Permission::updateOrCreate(['name' => PermissionEnum::DeleteResult]),
         ];
 
-        $campaign = [
+        // Campaign permissions
+        $campaignPermissions = [
             Permission::updateOrCreate(['name' => PermissionEnum::ViewCampaign]),
             Permission::updateOrCreate(['name' => PermissionEnum::CreateCampaign]),
             Permission::updateOrCreate(['name' => PermissionEnum::UpdateCampaign]),
             Permission::updateOrCreate(['name' => PermissionEnum::DeleteCampaign])
         ];
 
-        $campaignContent = [
+        // Campaign Content permissions
+        $campaignContentPermissions = [
             Permission::updateOrCreate(['name' => PermissionEnum::ViewCampaignContent]),
             Permission::updateOrCreate(['name' => PermissionEnum::CreateCampaignContent]),
             Permission::updateOrCreate(['name' => PermissionEnum::UpdateCampaignContent]),
             Permission::updateOrCreate(['name' => PermissionEnum::DeleteCampaignContent])
         ];
 
-        $kol = [
+        // KOL permissions
+        $kolPermissions = [
             Permission::updateOrCreate(['name' => PermissionEnum::ViewKOL]),
             Permission::updateOrCreate(['name' => PermissionEnum::CreateKOL]),
             Permission::updateOrCreate(['name' => PermissionEnum::UpdateKOL]),
             Permission::updateOrCreate(['name' => PermissionEnum::DeleteKOL]),
         ];
 
+        // Assign permissions to roles
+
+        // SuperAdmin - Has access to all features
         $superadmin = Role::findByName(RoleEnum::SuperAdmin);
         $superadmin->givePermissionTo($userPermissions);
         $superadmin->givePermissionTo($payrollPermissions);
         $superadmin->givePermissionTo($incomePermissions);
         $superadmin->givePermissionTo($otherSpentPermissions);
-        $superadmin->givePermissionTo($profile);
-        $superadmin->givePermissionTo($tenant);
+        $superadmin->givePermissionTo($profilePermissions);
+        $superadmin->givePermissionTo($tenantPermissions);
         $superadmin->givePermissionTo($resultPermissions);
-        $superadmin->givePermissionTo($campaign);
-        $superadmin->givePermissionTo($campaignContent);
-        $superadmin->givePermissionTo($kol);
+        $superadmin->givePermissionTo($campaignPermissions);
+        $superadmin->givePermissionTo($campaignContentPermissions);
+        $superadmin->givePermissionTo($kolPermissions);
 
+        // Client1 - Can CRUD campaigns and campaign_contents for their brand, monitoring, input budget
         $client1 = Role::findByName(RoleEnum::Client1);
-        $client1->givePermissionTo($kol);
-        $client1->givePermissionTo($campaign);
-        $client1->givePermissionTo($campaignContent);
-        $superadmin->givePermissionTo($profile);
+        $client1->givePermissionTo($profilePermissions);
+        $client1->givePermissionTo($campaignPermissions); // Full CRUD for campaigns
+        $client1->givePermissionTo($campaignContentPermissions); // Full CRUD for campaign contents
+        $client1->givePermissionTo([
+            Permission::findByName(PermissionEnum::ViewKOL) // Only view KOL for selecting
+        ]);
 
+        // Client2 - Monitor only (views, comment, likes, engagement rate, campaigns, campaign_contents)
         $client2 = Role::findByName(RoleEnum::Client2);
-        $client2->givePermissionTo($campaign);
-        $client2->givePermissionTo($campaignContent);
-        $superadmin->givePermissionTo($profile);
+        $client2->givePermissionTo($profilePermissions);
+        $client2->givePermissionTo([
+            Permission::findByName(PermissionEnum::ViewCampaign),
+            Permission::findByName(PermissionEnum::ViewCampaignContent),
+            Permission::findByName(PermissionEnum::ViewKOL) // Only view for monitoring
+        ]);
 
-        $tim_internal = Role::findByName(RoleEnum::TimInternal);
-        $tim_internal->givePermissionTo($kol);
-        $superadmin->givePermissionTo($profile);
+        // TimInternal - View campaigns and campaign_contents only (no edit/delete)
+        $timInternal = Role::findByName(RoleEnum::TimInternal);
+        $timInternal->givePermissionTo($profilePermissions);
+        $timInternal->givePermissionTo([
+            Permission::findByName(PermissionEnum::ViewCampaign),
+            Permission::findByName(PermissionEnum::ViewCampaignContent),
+            Permission::findByName(PermissionEnum::ViewKOL) // Only view
+        ]);
 
-        $tim_ads = Role::findByName(RoleEnum::TimAds);
-        $tim_ads->givePermissionTo($campaign);
-        $tim_ads->givePermissionTo($campaignContent);
-        $superadmin->givePermissionTo($profile);
+        // TimAds - Full KOL management, view campaigns and campaign_contents
+        $timAds = Role::findByName(RoleEnum::TimAds);
+        $timAds->givePermissionTo($profilePermissions);
+        $timAds->givePermissionTo($kolPermissions); // Full CRUD for KOL
+        $timAds->givePermissionTo([
+            Permission::findByName(PermissionEnum::ViewCampaign),
+            Permission::findByName(PermissionEnum::ViewCampaignContent)
+        ]);
     }
 }
