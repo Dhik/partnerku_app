@@ -2,7 +2,6 @@
 
 namespace App\Domain\Campaign\Controllers;
 
-use App\Domain\Campaign\BLL\KOL\KeyOpinionLeaderBLLInterface;
 use App\Domain\Campaign\Enums\KeyOpinionLeaderEnum;
 use App\Domain\Campaign\Enums\CampaignContentEnum;
 use App\Domain\Campaign\Exports\KeyOpinionLeaderExport;
@@ -10,7 +9,7 @@ use App\Domain\Campaign\Models\KeyOpinionLeader;
 use App\Domain\Campaign\Models\Statistic;
 use App\Domain\Campaign\Requests\KeyOpinionLeaderRequest;
 use App\Domain\Campaign\Requests\KolExcelRequest;
-use App\Domain\User\BLL\User\UserBLLInterface;
+use App\Domain\User\Models\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -22,22 +21,16 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
-use LaravelLang\Publisher\Services\Filesystem\Json;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
-use App\Domain\Sales\Services\GoogleSheetService;
 use Yajra\DataTables\DataTables;
 use Yajra\DataTables\Utilities\Request;
 
 class KeyOpinionLeaderController extends Controller
 {
-    protected $googleSheetService;
 
-    public function __construct(
-        protected KeyOpinionLeaderBLLInterface $kolBLL,
-        protected UserBLLInterface $userBLL,
-        GoogleSheetService $googleSheetService
-    ) {
-        $this->googleSheetService = $googleSheetService;
+    public function __construct()
+    {
     }
 
     /**
@@ -45,14 +38,82 @@ class KeyOpinionLeaderController extends Controller
      */
     protected function getCommonData(): array
     {
-        $channels = KeyOpinionLeaderEnum::Channel;
-        $niches = KeyOpinionLeaderEnum::Niche;
-        $skinTypes = KeyOpinionLeaderEnum::SkinType;
-        $skinConcerns = KeyOpinionLeaderEnum::SkinConcern;
-        $contentTypes = KeyOpinionLeaderEnum::ContentType;
-        $marketingUsers = $this->userBLL->getMarketingUsers();
+        $channels = KeyOpinionLeaderEnum::Channel ?? ['tiktok_video', 'instagram_feed', 'youtube_video'];
+        $niches = KeyOpinionLeaderEnum::Niche ?? ['beauty', 'fashion', 'lifestyle', 'tech'];
+        $skinTypes = KeyOpinionLeaderEnum::SkinType ?? ['normal', 'oily', 'dry', 'combination'];
+        $skinConcerns = KeyOpinionLeaderEnum::SkinConcern ?? ['acne', 'aging', 'dullness', 'sensitivity'];
+        $contentTypes = KeyOpinionLeaderEnum::ContentType ?? ['review', 'tutorial', 'unboxing', 'lifestyle'];
+        $marketingUsers = User::whereHas('roles', function($query) {
+            $query->whereIn('name', ['tim_internal', 'tim_ads', 'superadmin']);
+        })->get();
 
         return compact('channels', 'niches', 'skinTypes', 'skinConcerns', 'contentTypes', 'marketingUsers');
+    }
+
+    /**
+     * Get KOL datatable query
+     */
+    protected function getKOLDataTableQuery(Request $request)
+    {
+        $query = KeyOpinionLeader::with(['picContact', 'createdBy'])
+            ->select('key_opinion_leaders.*');
+
+        // Apply filters based on user role and tenant
+        $user = Auth::user();
+        if ($user->hasRole(['client_1', 'client_2'])) {
+            $query->where('tenant_id', $user->current_tenant_id);
+        }
+
+        // Apply search filters
+        if ($request->filled('channel')) {
+            $query->where('channel', $request->input('channel'));
+        }
+
+        if ($request->filled('niche')) {
+            $query->where('niche', $request->input('niche'));
+        }
+
+        if ($request->filled('content_type')) {
+            $query->where('content_type', $request->input('content_type'));
+        }
+
+        if ($request->filled('pic_contact')) {
+            $query->where('pic_contact', $request->input('pic_contact'));
+        }
+
+        if ($request->filled('status_affiliate')) {
+            $query->where('status_affiliate', $request->input('status_affiliate'));
+        }
+
+        if ($request->filled('followersMin')) {
+            $query->where('followers', '>=', (int) $request->input('followersMin'));
+        }
+
+        if ($request->filled('followersMax')) {
+            $query->where('followers', '<=', (int) $request->input('followersMax'));
+        }
+
+        return $query;
+    }
+
+    /**
+     * Calculate CPM and status recommendation
+     */
+    protected function calculateCpmAndStatus(KeyOpinionLeader $kol): array
+    {
+        $avgViews = $kol->average_view ?: 0;
+        $rate = $kol->rate ?: 0;
+        
+        // CPM calculation: (harga/slot / avg(views dari 10 video)) * 1000
+        $cpm = $avgViews > 0 ? ($rate / $avgViews) * 1000 : 0;
+        
+        // Status rekomendasi: CPM < 25000 -> Worth it, CPM >= 25000 -> Gagal
+        $statusRecommendation = $cpm < 25000 ? 'Worth it' : 'Gagal';
+        
+        return [
+            'cpm' => round($cpm, 2),
+            'status_recommendation' => $statusRecommendation
+        ];
     }
 
     /**
@@ -60,37 +121,51 @@ class KeyOpinionLeaderController extends Controller
      */
     public function get(Request $request): JsonResponse
     {
-        // $this->authorize('viewKOL', KeyOpinionLeader::class);
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
 
-        $query = $this->kolBLL->getKOLDatatable($request);
+        $query = $this->getKOLDataTableQuery($request);
 
         return DataTables::of($query)
             ->addColumn('pic_contact_name', function ($row) {
                 return $row->picContact->name ?? 'empty';
             })
             ->addColumn('actions', function ($row) {
-                $waButton = '';
+                $user = Auth::user();
+                $actions = '';
+                
+                // WhatsApp button
                 if (!empty($row->phone_number)) {
-                    // Format phone number for WhatsApp (remove non-digits and ensure it starts with country code)
                     $phoneNumber = preg_replace('/[^0-9]/', '', $row->phone_number);
-                    // If phone starts with 0, replace with 62 (Indonesia country code)
                     if (substr($phoneNumber, 0, 1) === '0') {
                         $phoneNumber = '62' . substr($phoneNumber, 1);
                     }
                     $waLink = 'https://wa.me/' . $phoneNumber;
                     
-                    $waButton = '<a href="' . $waLink . '" class="btn btn-success btn-xs" target="_blank" title="WhatsApp">
+                    $actions .= '<a href="' . $waLink . '" class="btn btn-success btn-xs" target="_blank" title="WhatsApp">
                                     <i class="fab fa-whatsapp"></i>
                                 </a> ';
                 }
                 
-                return $waButton . 
-                    '<a href=' . route('kol.show', $row->id) . ' class="btn btn-success btn-xs" title="View">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <button onclick="openEditModal(' . $row->id . ')" class="btn btn-primary btn-xs" title="Edit">
-                            <i class="fas fa-pencil-alt"></i>
-                        </button>';
+                // View button - all roles can view
+                $actions .= '<a href="' . route('kol.show', $row->id) . '" class="btn btn-info btn-xs" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a> ';
+                
+                // Edit button - Admin, Client1, TimAds can edit (TimInternal cannot edit)
+                if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('updateKOL', KeyOpinionLeader::class)) {
+                    $actions .= '<button onclick="openEditModal(' . $row->id . ')" class="btn btn-primary btn-xs" title="Edit">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button> ';
+                }
+                
+                // Delete button - Admin, Client1, TimAds only (TimInternal cannot delete)
+                if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('deleteKOL', KeyOpinionLeader::class)) {
+                    $actions .= '<button onclick="deleteKol(' . $row->id . ')" class="btn btn-danger btn-xs" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>';
+                }
+                
+                return $actions;
             })
             ->addColumn('refresh_follower', function ($row) {
                 return '<button class="btn btn-info btn-xs refresh-follower" data-id="' . $row->username . '">
@@ -100,91 +175,115 @@ class KeyOpinionLeaderController extends Controller
             ->addColumn('engagement_rate_display', function ($row) {
                 return $row->engagement_rate ? number_format($row->engagement_rate, 2) . '%' : '-';
             })
-            ->addColumn('views_last_9_post_display', function ($row) {
-                if ($row->views_last_9_post === null) {
-                    return '<span class="badge badge-secondary">Not Set</span>';
-                }
-                return $row->views_last_9_post ? 
-                    '<span class="badge badge-success">Yes</span>' : 
-                    '<span class="badge badge-danger">No</span>';
+            ->addColumn('cpm_display', function ($row) {
+                $cpmData = $this->calculateCpmAndStatus($row);
+                return number_format($cpmData['cpm'], 0, ',', '.');
             })
-            ->addColumn('activity_posting_display', function ($row) {
-                if ($row->activity_posting === null) {
-                    return '<span class="badge badge-secondary">Not Set</span>';
-                }
-                return $row->activity_posting ? 
-                    '<span class="badge badge-success">Active</span>' : 
-                    '<span class="badge badge-warning">Inactive</span>';
+            ->addColumn('status_recommendation_display', function ($row) {
+                $cpmData = $this->calculateCpmAndStatus($row);
+                $badgeClass = $cpmData['status_recommendation'] === 'Worth it' ? 'badge-success' : 'badge-danger';
+                return '<span class="badge ' . $badgeClass . '">' . $cpmData['status_recommendation'] . '</span>';
             })
-            ->addColumn('status_affiliate_display', function ($row) {
-                if (!$row->status_affiliate) {
-                    return '<span class="badge badge-secondary">Not Set</span>';
+            ->addColumn('tier_display', function ($row) {
+                $followers = $row->followers ?: 0;
+                
+                if ($followers >= 1000 && $followers < 10000) {
+                    $tier = 'Nano';
+                    $badgeClass = 'badge-info';
+                } elseif ($followers >= 10000 && $followers < 50000) {
+                    $tier = 'Micro';
+                    $badgeClass = 'badge-purple';
+                } elseif ($followers >= 50000 && $followers < 250000) {
+                    $tier = 'Mid-Tier';
+                    $badgeClass = 'badge-warning';
+                } elseif ($followers >= 250000 && $followers < 1000000) {
+                    $tier = 'Macro';
+                    $badgeClass = 'badge-success';
+                } elseif ($followers >= 1000000) {
+                    $tier = 'Mega';
+                    $badgeClass = 'badge-danger';
+                } else {
+                    $tier = 'Unknown';
+                    $badgeClass = 'badge-secondary';
                 }
                 
-                $badgeClass = match($row->status_affiliate) {
-                    'Qualified' => 'badge-success',
-                    'Waiting List' => 'badge-warning', 
-                    'Not Qualified' => 'badge-danger',
-                    default => 'badge-secondary'
-                };
-                
-                return '<span class="badge ' . $badgeClass . '">' . $row->status_affiliate . '</span>';
-            })
-            ->editColumn('program', function ($row) {
-                return $row->program ?? '-';
+                return '<span class="badge ' . $badgeClass . '">' . $tier . '</span>';
             })
             ->editColumn('rate', function ($row) {
                 return number_format($row->rate, 0, ',', '.');
             })
+            ->editColumn('followers', function ($row) {
+                return number_format($row->followers, 0, ',', '.');
+            })
             ->rawColumns([
                 'actions', 
                 'refresh_follower', 
-                'views_last_9_post_display', 
-                'activity_posting_display', 
-                'status_affiliate_display'
+                'cpm_display',
+                'status_recommendation_display',
+                'tier_display'
             ])
             ->toJson();
     }
 
     public function getKpiData(Request $request): JsonResponse
     {
-        // Apply the same filters as your main datatable query
-        $query = $this->kolBLL->getKOLDatatable($request);
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
         
-        // Get filtered results for KPI calculation
+        $query = $this->getKOLDataTableQuery($request);
         $filteredKols = $query->get();
         
         $totalKol = $filteredKols->count();
-        $totalAffiliate = $filteredKols->whereNotNull('status_affiliate')->count();
-        $activeAffiliate = $filteredKols->where('status_affiliate', 'active')->count();
-        $activePosting = $filteredKols->where('activity_posting', true)->count();
-        $hasViews = $filteredKols->where('views_last_9_post', true)->count();
+        $worthItCount = 0;
+        $totalCpm = 0;
+        $validCpmCount = 0;
         
-        // Calculate average engagement rate (only for KOLs with engagement data)
-        $kolsWithEngagement = $filteredKols->whereNotNull('engagement_rate');
-        $avgEngagement = $kolsWithEngagement->count() > 0 
-            ? $kolsWithEngagement->avg('engagement_rate') 
-            : 0;
+        foreach ($filteredKols as $kol) {
+            $cpmData = $this->calculateCpmAndStatus($kol);
+            if ($cpmData['status_recommendation'] === 'Worth it') {
+                $worthItCount++;
+            }
+            if ($cpmData['cpm'] > 0) {
+                $totalCpm += $cpmData['cpm'];
+                $validCpmCount++;
+            }
+        }
+        
+        $avgCpm = $validCpmCount > 0 ? $totalCpm / $validCpmCount : 0;
+        $worthItPercentage = $totalKol > 0 ? ($worthItCount / $totalKol) * 100 : 0;
         
         return response()->json([
             'total_kol' => $totalKol,
-            'total_affiliate' => $totalAffiliate,
-            'active_affiliate' => $activeAffiliate,
-            'active_posting' => $activePosting,
-            'has_views' => $hasViews,
-            'avg_engagement' => round($avgEngagement, 2)
+            'worth_it_count' => $worthItCount,
+            'worth_it_percentage' => round($worthItPercentage, 2),
+            'avg_cpm' => round($avgCpm, 2),
+            'total_followers' => $filteredKols->sum('followers')
         ]);
     }
 
-
     /**
-     * Select KOl by username
+     * Select KOL by username
      */
     public function select(Request $request): JsonResponse
     {
         $this->authorize('viewKOL', KeyOpinionLeader::class);
 
-        return response()->json($this->kolBLL->selectKOL($request->input('search')));
+        $search = $request->input('search', '');
+        $user = Auth::user();
+        
+        $query = KeyOpinionLeader::select(['id', 'username', 'name', 'channel'])
+            ->where(function($q) use ($search) {
+                $q->where('username', 'like', "%{$search}%")
+                  ->orWhere('name', 'like', "%{$search}%");
+            });
+
+        // Apply tenant filter for clients
+        if ($user->hasRole(['client_1', 'client_2'])) {
+            $query->where('tenant_id', $user->current_tenant_id);
+        }
+
+        $kols = $query->limit(10)->get();
+
+        return response()->json($kols);
     }
 
     /**
@@ -192,7 +291,7 @@ class KeyOpinionLeaderController extends Controller
      */
     public function index(): View|\Illuminate\Foundation\Application|Factory|Application
     {
-        // $this->authorize('viewKOL', KeyOpinionLeader::class);
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
         return view('admin.kol.index', $this->getCommonData());
     }
 
@@ -223,29 +322,84 @@ class KeyOpinionLeaderController extends Controller
     {
         $this->authorize('createKOL', KeyOpinionLeader::class);
 
-        $kol = $this->kolBLL->storeKOL($request);
-        return redirect()
-            ->route('kol.show', $kol->id)
-            ->with([
-                'alert' => 'success',
-                'message' => trans('messages.success_save', ['model' => trans('labels.key_opinion_leader')]),
-            ]);
+        try {
+            $data = $request->validated();
+            $data['created_by'] = Auth::id();
+            $data['tenant_id'] = Auth::user()->current_tenant_id;
+            
+            // Calculate CPM and status
+            $avgViews = $data['average_view'] ?? 0;
+            $rate = $data['rate'] ?? 0;
+            $cpm = $avgViews > 0 ? ($rate / $avgViews) * 1000 : 0;
+            $data['cpm'] = round($cpm, 2);
+            $data['status_recommendation'] = $cpm < 25000 ? 'Worth it' : 'Gagal';
+
+            $kol = KeyOpinionLeader::create($data);
+            
+            return redirect()
+                ->route('kol.show', $kol->id)
+                ->with([
+                    'alert' => 'success',
+                    'message' => trans('messages.success_save', ['model' => trans('labels.key_opinion_leader')]),
+                ]);
+        } catch (\Exception $e) {
+            Log::error('Error creating KOL: ' . $e->getMessage());
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Failed to create KOL.']);
+        }
     }
 
     /**
      * store KOL via excel
      */
-    protected function storeExcel(KolExcelRequest $request): JsonResponse
+    public function storeExcel(KolExcelRequest $request): JsonResponse
     {
         $this->authorize('createKOL', KeyOpinionLeader::class);
 
-        $result = $this->kolBLL->storeExcel($request->input('data'));
+        try {
+            $data = $request->input('data');
+            $user = Auth::user();
+            $successCount = 0;
+            $errorCount = 0;
 
-        if (! $result) {
-            return response()->json('failed', 500);
+            foreach ($data as $row) {
+                try {
+                    $kolData = array_merge($row, [
+                        'created_by' => $user->id,
+                        'tenant_id' => $user->current_tenant_id,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+
+                    // Calculate CPM and status
+                    $avgViews = $kolData['average_view'] ?? 0;
+                    $rate = $kolData['rate'] ?? 0;
+                    $cpm = $avgViews > 0 ? ($rate / $avgViews) * 1000 : 0;
+                    $kolData['cpm'] = round($cpm, 2);
+                    $kolData['status_recommendation'] = $cpm < 25000 ? 'Worth it' : 'Gagal';
+
+                    KeyOpinionLeader::create($kolData);
+                    $successCount++;
+                } catch (\Exception $e) {
+                    $errorCount++;
+                    Log::error('Error creating KOL from excel: ' . $e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully imported {$successCount} KOLs. {$errorCount} errors occurred.",
+                'success_count' => $successCount,
+                'error_count' => $errorCount
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in storeExcel: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to import KOLs.'
+            ], 500);
         }
-
-        return response()->json('success');
     }
 
     /**
@@ -257,37 +411,12 @@ class KeyOpinionLeaderController extends Controller
 
         return view('admin.kol.edit', array_merge(['keyOpinionLeader' => $keyOpinionLeader], $this->getCommonData()));
     }
+
     public function getEditData(KeyOpinionLeader $keyOpinionLeader): JsonResponse
     {
         $this->authorize('updateKOL', KeyOpinionLeader::class);
         
-        return response()->json([
-            'id' => $keyOpinionLeader->id,
-            'username' => $keyOpinionLeader->username,
-            'phone_number' => $keyOpinionLeader->phone_number,
-            'views_last_9_post' => $keyOpinionLeader->views_last_9_post,
-            'activity_posting' => $keyOpinionLeader->activity_posting,
-            // Add all required fields to preserve existing data
-            'channel' => $keyOpinionLeader->channel,
-            'niche' => $keyOpinionLeader->niche,
-            'average_view' => $keyOpinionLeader->average_view,
-            'skin_type' => $keyOpinionLeader->skin_type,
-            'skin_concern' => $keyOpinionLeader->skin_concern,
-            'content_type' => $keyOpinionLeader->content_type,
-            'rate' => $keyOpinionLeader->rate,
-            'pic_contact' => $keyOpinionLeader->pic_contact,
-            'name' => $keyOpinionLeader->name,
-            'address' => $keyOpinionLeader->address,
-            'bank_name' => $keyOpinionLeader->bank_name,
-            'bank_account' => $keyOpinionLeader->bank_account,
-            'bank_account_name' => $keyOpinionLeader->bank_account_name,
-            'npwp' => $keyOpinionLeader->npwp,
-            'npwp_number' => $keyOpinionLeader->npwp_number,
-            'nik' => $keyOpinionLeader->nik,
-            'notes' => $keyOpinionLeader->notes,
-            'product_delivery' => $keyOpinionLeader->product_delivery,
-            'product' => $keyOpinionLeader->product,
-        ]);
+        return response()->json($keyOpinionLeader->toArray());
     }
 
     /**
@@ -298,23 +427,35 @@ class KeyOpinionLeaderController extends Controller
         $this->authorize('updateKOL', KeyOpinionLeader::class);
         
         try {
-            $kol = $this->kolBLL->updateKOL($keyOpinionLeader, $request);
+            $data = $request->validated();
+            
+            // Calculate CPM and status
+            $avgViews = $data['average_view'] ?? $keyOpinionLeader->average_view ?? 0;
+            $rate = $data['rate'] ?? $keyOpinionLeader->rate ?? 0;
+            $cpm = $avgViews > 0 ? ($rate / $avgViews) * 1000 : 0;
+            $data['cpm'] = round($cpm, 2);
+            $data['status_recommendation'] = $cpm < 25000 ? 'Worth it' : 'Gagal';
+            
+            $keyOpinionLeader->update($data);
+            
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
                     'message' => trans('messages.success_update', ['model' => trans('labels.key_opinion_leader')]),
-                    'data' => $kol
+                    'data' => $keyOpinionLeader->fresh()
                 ]);
             }
             
             return redirect()
-                ->route('kol.show', $kol->id)
+                ->route('kol.show', $keyOpinionLeader->id)
                 ->with([
                     'alert' => 'success',
                     'message' => trans('messages.success_update', ['model' => trans('labels.key_opinion_leader')]),
                 ]);
                 
         } catch (\Exception $e) {
+            Log::error('Error updating KOL: ' . $e->getMessage());
+            
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
@@ -327,38 +468,65 @@ class KeyOpinionLeaderController extends Controller
     }
 
     /**
+     * Delete KOL
+     */
+    public function destroy(KeyOpinionLeader $keyOpinionLeader): JsonResponse
+    {
+        $this->authorize('deleteKOL', KeyOpinionLeader::class);
+
+        try {
+            $keyOpinionLeader->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => trans('messages.success_delete', ['model' => trans('labels.key_opinion_leader')])
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error deleting KOL: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete KOL.'
+            ], 500);
+        }
+    }
+
+    /**
      * show KOL
      */
     public function show(KeyOpinionLeader $keyOpinionLeader): View|\Illuminate\Foundation\Application|Factory|Application
     {
-        // $this->authorize('viewKOL', KeyOpinionLeader::class);
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
 
-        if ($keyOpinionLeader->followers >= 1000 && $keyOpinionLeader->followers < 10000) {
+        // Calculate tiering based on followers
+        $followers = $keyOpinionLeader->followers ?: 0;
+        
+        if ($followers >= 1000 && $followers < 10000) {
             $tiering = "Nano";
             $er_top = 0.1;
             $er_bottom = 0.04;
             $cpm_target = 35000;
-        } elseif ($keyOpinionLeader->followers >= 10000 && $keyOpinionLeader->followers < 50000) {
+        } elseif ($followers >= 10000 && $followers < 50000) {
             $tiering = "Micro";
             $er_top = 0.05;
             $er_bottom = 0.02;
             $cpm_target = 35000;
-        } elseif ($keyOpinionLeader->followers >= 50000 && $keyOpinionLeader->followers < 250000) {
+        } elseif ($followers >= 50000 && $followers < 250000) {
             $tiering = "Mid-Tier";
             $er_top = 0.03;
             $er_bottom = 0.015;
             $cpm_target = 25000;
-        } elseif ($keyOpinionLeader->followers >= 250000 && $keyOpinionLeader->followers < 1000000) {
+        } elseif ($followers >= 250000 && $followers < 1000000) {
             $tiering = "Macro TOFU";
             $er_top = 0.025;
             $er_bottom = 0.01;
             $cpm_target = 10000;
-        } elseif ($keyOpinionLeader->followers >= 1000000 && $keyOpinionLeader->followers < 2000000) {
+        } elseif ($followers >= 1000000 && $followers < 2000000) {
             $tiering = "Mega TOFU";
             $er_top = 0.02;
             $er_bottom = 0.01;
             $cpm_target = 10000;
-        } elseif ($keyOpinionLeader->followers >= 2000000) {
+        } elseif ($followers >= 2000000) {
             $tiering = "Mega MOFU";
             $er_top = 0.02;
             $er_bottom = 0.01;
@@ -369,6 +537,8 @@ class KeyOpinionLeaderController extends Controller
             $er_bottom = null;
             $cpm_target = null;
         }
+
+        // Get statistics for this KOL
         $statistics = Statistic::whereHas('campaignContent', function ($query) use ($keyOpinionLeader) {
             $query->where('username', $keyOpinionLeader->username);
         })->get();
@@ -377,34 +547,68 @@ class KeyOpinionLeaderController extends Controller
         $total_likes = $statistics->sum('like');
         $total_comments = $statistics->sum('comment');
 
-        // Calculate cpm_actual
+        // Calculate CPM actual
         $cpm_actual = $total_views > 0
             ? ($keyOpinionLeader->rate / $total_views) * $keyOpinionLeader->followers
             : 0;
 
-        // Calculate er_actual
+        // Calculate ER actual
         $er_actual = $total_views > 0
             ? (($total_likes + $total_comments) / $total_views) * 100
             : 0;
 
-        return view('admin.kol.show', compact('keyOpinionLeader', 'tiering', 'er_top', 'er_bottom', 'cpm_target', 'cpm_actual', 'er_actual'));
+        // Calculate CPM and status recommendation
+        $cpmData = $this->calculateCpmAndStatus($keyOpinionLeader);
+
+        return view('admin.kol.show', compact(
+            'keyOpinionLeader', 
+            'tiering', 
+            'er_top', 
+            'er_bottom', 
+            'cpm_target', 
+            'cpm_actual', 
+            'er_actual',
+            'cpmData'
+        ));
     }
-    public function chart()
+
+    public function chart(): JsonResponse
     {
-        $data = KeyOpinionLeader::select('channel', DB::raw('count(*) as count'))
-            ->groupBy('channel')
-            ->get();
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
+        
+        $user = Auth::user();
+        $query = KeyOpinionLeader::select('channel', DB::raw('count(*) as count'))
+            ->groupBy('channel');
+
+        // Apply tenant filter for clients
+        if ($user->hasRole(['client_1', 'client_2'])) {
+            $query->where('tenant_id', $user->current_tenant_id);
+        }
+
+        $data = $query->get();
+        
         $response = [
             'labels' => $data->pluck('channel'),
             'values' => $data->pluck('count'),
         ];
+        
         return response()->json($response);
     }
-    public function averageRate()
+
+    public function averageRate(): JsonResponse
     {
-        $data = KeyOpinionLeader::select('channel', DB::raw('AVG(rate) as average_rate'))
-            ->groupBy('channel')
-            ->get();
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
+        
+        $user = Auth::user();
+        $query = KeyOpinionLeader::select('channel', DB::raw('AVG(rate) as average_rate'))
+            ->groupBy('channel');
+
+        // Apply tenant filter for clients
+        if ($user->hasRole(['client_1', 'client_2'])) {
+            $query->where('tenant_id', $user->current_tenant_id);
+        }
+
+        $data = $query->get();
 
         $response = [
             'labels' => $data->pluck('channel'),
@@ -419,9 +623,14 @@ class KeyOpinionLeaderController extends Controller
      */
     public function showJson(KeyOpinionLeader $keyOpinionLeader): JsonResponse
     {
-        // $this->authorize('viewKOL', KeyOpinionLeader::class);
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
 
-        return response()->json($keyOpinionLeader);
+        $cpmData = $this->calculateCpmAndStatus($keyOpinionLeader);
+        $kolData = $keyOpinionLeader->toArray();
+        $kolData['cpm_calculated'] = $cpmData['cpm'];
+        $kolData['status_recommendation_calculated'] = $cpmData['status_recommendation'];
+
+        return response()->json($kolData);
     }
 
     /**
@@ -429,36 +638,90 @@ class KeyOpinionLeaderController extends Controller
      */
     public function export(Request $request): Response|BinaryFileResponse
     {
-        // $this->authorize('viewKOL', KeyOpinionLeader::class);
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
+
+        $user = Auth::user();
+        $query = KeyOpinionLeader::query();
+
+        // Apply tenant filter for clients
+        if ($user->hasRole(['client_1', 'client_2'])) {
+            $query->where('tenant_id', $user->current_tenant_id);
+        }
+
+        // Apply filters
+        if ($request->filled('channel')) {
+            $query->where('channel', $request->input('channel'));
+        }
+
+        if ($request->filled('niche')) {
+            $query->where('niche', $request->input('niche'));
+        }
+
+        if ($request->filled('content_type')) {
+            $query->where('content_type', $request->input('content_type'));
+        }
+
+        if ($request->filled('pic_contact')) {
+            $query->where('pic_contact', $request->input('pic_contact'));
+        }
+
+        if ($request->filled('status_affiliate')) {
+            $query->where('status_affiliate', $request->input('status_affiliate'));
+        }
+
+        if ($request->filled('followersMin')) {
+            $query->where('followers', '>=', (int) $request->input('followersMin'));
+        }
+
+        if ($request->filled('followersMax')) {
+            $query->where('followers', '<=', (int) $request->input('followersMax'));
+        }
+
+        // Get data and calculate CPM for each
+        $kols = $query->get();
+        $exportData = $kols->map(function($kol) {
+            $cpmData = $this->calculateCpmAndStatus($kol);
+            $kol->cpm_calculated = $cpmData['cpm'];
+            $kol->status_recommendation_calculated = $cpmData['status_recommendation'];
+            return $kol;
+        });
 
         return (new KeyOpinionLeaderExport())
-            ->forChannel($request->input('channel'))
-            ->forNiche($request->input('niche'))
-            ->forSkinType($request->input('skinType'))
-            ->forSkinConcern($request->input('skinConcern'))
-            ->forContentType($request->input('contentType'))
-            ->forPic($request->input('pic'))
-            ->forStatusAffiliate($request->input('statusAffiliate'))
-            ->forFollowersRange(
-                $request->input('followersMin') ? (int) $request->input('followersMin') : null,
-                $request->input('followersMax') ? (int) $request->input('followersMax') : null
-            )
-            ->download('kol-affiliate-data.xlsx');
+            ->collection($exportData)
+            ->download('kol-data-' . date('Y-m-d') . '.xlsx');
     }
+
     public function refreshFollowersFollowing(string $username): JsonResponse
     {
+        $this->authorize('updateKOL', KeyOpinionLeader::class);
+        
         $username = preg_replace('/\s*\(.*?\)\s*/', '', $username);
-        $keyOpinionLeader = KeyOpinionLeader::where('username', $username)->first();
+        
+        // Add tenant filtering
+        $user = Auth::user();
+        $query = KeyOpinionLeader::where('username', $username);
+        
+        if ($user->hasRole(['client_1', 'client_2'])) {
+            $query->where('tenant_id', $user->current_tenant_id);
+        }
+        
+        $keyOpinionLeader = $query->first();
 
         if (!$keyOpinionLeader) {
-            $kol = KeyOpinionLeader::where('username', 'LIKE', '%' . $username . '%')->first();
+            // Try to find similar KOL for channel reference
+            $similarKolQuery = KeyOpinionLeader::where('username', 'LIKE', '%' . $username . '%');
+            
+            if ($user->hasRole(['client_1', 'client_2'])) {
+                $similarKolQuery->where('tenant_id', $user->current_tenant_id);
+            }
+            
+            $similarKol = $similarKolQuery->first();
+            
             $keyOpinionLeader = KeyOpinionLeader::create([
                 'username' => $username,
-                'channel' => $kol->channel,
+                'channel' => $similarKol ? $similarKol->channel : 'tiktok_video',
                 'niche' => '-',
                 'average_view' => 0,
-                'skin_type' => '-',
-                'skin_concern' => '-',
                 'content_type' => '-',
                 'rate' => 0,
                 'cpm' => 0,
@@ -466,7 +729,9 @@ class KeyOpinionLeaderController extends Controller
                 'pic_contact' => Auth::user()->id,
                 'followers' => 0,
                 'following' => 0,
+                'tenant_id' => Auth::user()->current_tenant_id,
             ]);
+            
             if (!$keyOpinionLeader) {
                 return response()->json(['error' => 'Key Opinion Leader not found'], 404);
             }
@@ -510,12 +775,25 @@ class KeyOpinionLeaderController extends Controller
                 return response()->json(['error' => 'Failed to fetch data'], $response->status());
             }
         } catch (Exception $e) {
+            Log::error('Error refreshing followers: ' . $e->getMessage());
             return response()->json(['error' => 'An error occurred'], 500);
         }
     }
+
     public function refreshFollowersFollowingSingle(string $username): JsonResponse
     {
-        $keyOpinionLeader = KeyOpinionLeader::where('username', $username)->first();
+        $this->authorize('updateKOL', KeyOpinionLeader::class);
+        
+        // Add tenant filtering
+        $user = Auth::user();
+        $query = KeyOpinionLeader::where('username', $username);
+        
+        if ($user->hasRole(['client_1', 'client_2'])) {
+            $query->where('tenant_id', $user->current_tenant_id);
+        }
+        
+        $keyOpinionLeader = $query->first();
+        
         if (!$keyOpinionLeader) {
             return response()->json(['error' => 'Key Opinion Leader not found'], 404);
         }
@@ -558,10 +836,10 @@ class KeyOpinionLeaderController extends Controller
                 } elseif ($keyOpinionLeader->channel === 'instagram_feed') {
                     $followers = $data['data']['follower_count'] ?? 0;
                     $following = $data['data']['following_count'] ?? 0;
-                    $totalLikes = $data['data']['total_likes'] ?? 0; // Adjust field name as needed for Instagram
-                    $videoCount = $data['data']['media_count'] ?? 0; // Adjust field name as needed for Instagram
+                    $totalLikes = $data['data']['total_likes'] ?? 0;
+                    $videoCount = $data['data']['media_count'] ?? 0;
                     
-                    // Calculate engagement rate for Instagram (if applicable)
+                    // Calculate engagement rate for Instagram
                     $engagementRate = null;
                     if ($followers > 0 && $videoCount > 0) {
                         $avgLikesPerPost = $totalLikes / $videoCount;
@@ -580,6 +858,13 @@ class KeyOpinionLeaderController extends Controller
                 if ($engagementRate !== null) {
                     $updateData['engagement_rate'] = $engagementRate;
                 }
+
+                // Recalculate CPM and status after updating
+                $avgViews = $keyOpinionLeader->average_view ?: 0;
+                $rate = $keyOpinionLeader->rate ?: 0;
+                $cpm = $avgViews > 0 ? ($rate / $avgViews) * 1000 : 0;
+                $updateData['cpm'] = round($cpm, 2);
+                $updateData['status_recommendation'] = $cpm < 25000 ? 'Worth it' : 'Gagal';
                 
                 $keyOpinionLeader->update($updateData);
                 
@@ -589,6 +874,8 @@ class KeyOpinionLeaderController extends Controller
                     'total_likes' => $totalLikes,
                     'video_count' => $videoCount,
                     'engagement_rate' => $engagementRate,
+                    'cpm' => $updateData['cpm'],
+                    'status_recommendation' => $updateData['status_recommendation'],
                     'message' => 'Profile data updated successfully.',
                 ]);
                 
@@ -597,82 +884,104 @@ class KeyOpinionLeaderController extends Controller
             }
             
         } catch (Exception $e) {
+            Log::error('Error refreshing single KOL: ' . $e->getMessage());
             return response()->json(['error' => 'An error occurred while refreshing data', 'details' => $e->getMessage()], 500);
         }
     }
-    public function importKeyOpinionLeaders()
+
+    public function importKeyOpinionLeaders(): JsonResponse
     {
-        $this->googleSheetService->setSpreadsheetId('11ob241Vwz7EuvhT0V9mBo7u_GDLSIkiVZ_sgKpQ4GfA');
-        set_time_limit(0);
-        $range = 'Sheet1!A2:H'; // Adjust range based on your data
-        $sheetData = $this->googleSheetService->getSheetData($range);
+        $this->authorize('createKOL', KeyOpinionLeader::class);
+        
+        try {
+            $this->googleSheetService->setSpreadsheetId('11ob241Vwz7EuvhT0V9mBo7u_GDLSIkiVZ_sgKpQ4GfA');
+            set_time_limit(0);
+            $range = 'Sheet1!A2:H';
+            $sheetData = $this->googleSheetService->getSheetData($range);
 
-        $chunkSize = 50;
-        $totalRows = count($sheetData);
-        $processedRows = 0;
-        $updatedRows = 0;
-        $skippedRows = 0;
+            $chunkSize = 50;
+            $totalRows = count($sheetData);
+            $processedRows = 0;
+            $updatedRows = 0;
+            $skippedRows = 0;
+            $user = Auth::user();
 
-        foreach (array_chunk($sheetData, $chunkSize) as $chunk) {
-            foreach ($chunk as $row) {
-                // Skip if username (column C) is empty
-                if (empty($row[2])) {
-                    $skippedRows++;
-                    continue;
+            foreach (array_chunk($sheetData, $chunkSize) as $chunk) {
+                foreach ($chunk as $row) {
+                    // Skip if username (column C) is empty
+                    if (empty($row[2])) {
+                        $skippedRows++;
+                        continue;
+                    }
+                    
+                    // Process username from column C
+                    $username = $this->processUsername($row[2]);
+                    
+                    // Skip if username processing failed
+                    if (!$username) {
+                        $skippedRows++;
+                        continue;
+                    }
+
+                    $kolData = [
+                        'username'         => $username,
+                        'name'             => $row[3] ?? null,
+                        'phone_number'     => $row[4] ?? null,
+                        'address'          => $row[5] ?? null,
+                        'niche'            => $row[6] ?? null,
+                        'content_type'     => $row[7] ?? null,
+                        'channel'          => 'tiktok_video',
+                        'cpm'              => 0,
+                        'followers'        => 0,
+                        'following'        => 0,
+                        'average_view'     => 0,
+                        'rate'             => 0,
+                        'created_by'       => $user->id,
+                        'pic_contact'      => $user->id,
+                        'tenant_id'        => $user->current_tenant_id,
+                        'status_recommendation' => 'Worth it', // Default
+                        'updated_at'       => now(),
+                    ];
+
+                    // Check for duplicate by username and tenant
+                    $existingKolQuery = KeyOpinionLeader::where('username', $username);
+                    
+                    // Apply tenant filter for clients
+                    if ($user->hasRole(['client_1', 'client_2'])) {
+                        $existingKolQuery->where('tenant_id', $user->current_tenant_id);
+                    }
+                    
+                    $existingKol = $existingKolQuery->first();
+
+                    if ($existingKol) {
+                        // Update existing record
+                        $existingKol->update($kolData);
+                        $updatedRows++;
+                    } else {
+                        // Create new record
+                        $kolData['created_at'] = now();
+                        KeyOpinionLeader::create($kolData);
+                        $processedRows++;
+                    }
                 }
-                
-                // Process username from column C
-                $username = $this->processUsername($row[2]);
-                
-                // Skip if username processing failed
-                if (!$username) {
-                    $skippedRows++;
-                    continue;
-                }
-
-                $kolData = [
-                    'username'         => $username,
-                    'name'             => $row[3] ?? null, // Column D
-                    'phone_number'     => $row[4] ?? null, // Column E
-                    'address'          => $row[5] ?? null, // Column F
-                    'niche'            => $row[6] ?? null, // Column G
-                    'content_type'     => $row[7] ?? null, // Column H
-                    'channel'          => 'tiktok_video',
-                    'type'             => 'affiliate',
-                    'cpm'              => 0,
-                    'followers'        => 0,
-                    'following'        => 0,
-                    'average_view'     => 0,
-                    'skin_type'        => '', // Set default or adjust as needed
-                    'skin_concern'     => '', // Set default or adjust as needed
-                    'rate'             => 0,
-                    'updated_at'       => now(),
-                ];
-
-                // Check for duplicate by username
-                $existingKol = KeyOpinionLeader::where('username', $username)->first();
-
-                if ($existingKol) {
-                    // Update existing record
-                    $existingKol->update($kolData);
-                    $updatedRows++;
-                } else {
-                    // Create new record
-                    $kolData['created_at'] = now();
-                    KeyOpinionLeader::create($kolData);
-                    $processedRows++;
-                }
+                usleep(100000); // Small delay to prevent overwhelming the server
             }
-            usleep(100000); // Small delay to prevent overwhelming the server
-        }
 
-        return response()->json([
-            'message' => 'Key Opinion Leaders imported successfully',
-            'total_rows' => $totalRows,
-            'processed_rows' => $processedRows,
-            'updated_rows' => $updatedRows,
-            'skipped_rows' => $skippedRows
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Key Opinion Leaders imported successfully',
+                'total_rows' => $totalRows,
+                'processed_rows' => $processedRows,
+                'updated_rows' => $updatedRows,
+                'skipped_rows' => $skippedRows
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error importing KOLs: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to import KOLs: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -702,17 +1011,16 @@ class KeyOpinionLeaderController extends Controller
         }
 
         // Case 3: Plain username (like user2724318011378) - return as is
-        // This handles usernames that don't have @ at first or are not URL type
         return $username;
     }
+
     public function getBulkUsernames(Request $request): JsonResponse
     {
-        $query = $this->kolBLL->getKOLDatatable($request);
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
+        
+        $query = $this->getKOLDataTableQuery($request);
         $usernames = $query->whereIn('channel', ['tiktok_video'])
-                        ->where('type', 'affiliate')
                         ->where('followers', 0)
-                        // ->where('following', 0)
-                        // ->where('total_likes', '>', 0)
                         ->whereDate('updated_at', '2025-06-04')
                         ->pluck('username')
                         ->toArray();

@@ -3,6 +3,7 @@
 namespace App\Domain\Campaign\Models;
 
 use App\Domain\Campaign\Enums\KeyOpinionLeaderEnum;
+use App\Domain\Tenant\Traits\FilterByTenant;
 use App\Domain\User\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,14 +11,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class KeyOpinionLeader extends Model
 {
+    use FilterByTenant;
 
     protected $fillable = [
         'channel',
         'username',
         'niche',
         'average_view',
-        'skin_type',
-        'skin_concern',
         'content_type',
         'rate',
         'pic_contact',
@@ -26,30 +26,23 @@ class KeyOpinionLeader extends Model
         'name',
         'address',
         'phone_number',
-        'bank_name',
-        'bank_account',
-        'bank_account_name',
-        'npwp',
-        'npwp_number',
-        'nik',
-        'notes',
-        'product_delivery',
-        'product',
-        'followers',
-        'following',
-        'engagement_rate',
-        'program',
-        'views_last_9_post',
-        'activity_posting',
-        'status_affiliate',
-        'total_likes',
-        'video_count',
+        'link',
+        'price_per_slot',
+        'category',
+        'tier',
+        'gmv',
+        'pic_listing',
+        'pic_content',
+        'status_recommendation',
+        'tenant_id',
     ];
 
     protected $casts = [
-        'views_last_9_post' => 'boolean',
-        'activity_posting' => 'boolean',
-        'engagement_rate' => 'float',
+        'average_view' => 'integer',
+        'rate' => 'integer',
+        'cpm' => 'integer',
+        'price_per_slot' => 'integer',
+        'gmv' => 'integer',
     ];
 
     protected $appends = [
@@ -87,8 +80,12 @@ class KeyOpinionLeader extends Model
     /**
      * Return link WhatsApp
      */
-    public function getWaLinkAttribute(): string
+    public function getWaLinkAttribute(): ?string
     {
+        if (!$this->phone_number) {
+            return null;
+        }
+
         $phoneNumber = $this->phone_number;
 
         // Check if phone number starts with '0'

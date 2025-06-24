@@ -334,7 +334,8 @@ return [
             'text' => 'Campaign Management',
             'can' => [
                 PermissionEnum::ViewCampaign,
-                PermissionEnum::ViewKOL
+                PermissionEnum::ViewKOL,
+                PermissionEnum::CreateKOL
             ],
             'icon' => 'fas fa-fw fa-bullhorn',
             'submenu' => [
@@ -344,6 +345,16 @@ return [
                     'icon' => 'nav-icon far fa-circle',
                     'can' => [PermissionEnum::ViewCampaign],
                     'active' => ['admin/campaign*']
+                ],
+                [
+                    'text' => 'Key Opinion Leaders',
+                    'url' => 'admin/kol',
+                    'icon' => 'nav-icon far fa-circle',
+                    'can' => [
+                        PermissionEnum::ViewKOL,
+                        PermissionEnum::CreateKOL
+                    ],
+                    'active' => ['admin/kol*']
                 ],
             ]
         ],

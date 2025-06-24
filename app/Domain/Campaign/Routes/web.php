@@ -3,6 +3,7 @@
 use App\Domain\Campaign\Controllers\CampaignContentController;
 use App\Domain\Campaign\Controllers\CampaignController;
 use App\Domain\Campaign\Controllers\StatisticController;
+use App\Domain\Campaign\Controllers\KeyOpinionLeaderController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -74,6 +75,32 @@ Route::prefix('admin')
                 Route::delete('/{campaignContent}', [CampaignContentController::class, 'destroy'])
                     ->name('campaignContent.destroy');
                     
+            });
+
+        
+        Route::prefix('kol')
+            ->group(function () {
+                Route::get('/', [KeyOpinionLeaderController::class, 'index'])->name('kol.index');
+                Route::get('/get', [KeyOpinionLeaderController::class, 'get'])->name('kol.get');
+                Route::get('/kpi', [KeyOpinionLeaderController::class, 'getKpiData'])->name('kol.kpi');
+                Route::get('/select', [KeyOpinionLeaderController::class, 'select'])->name('kol.select');
+                Route::get('/chart', [KeyOpinionLeaderController::class, 'chart'])->name('kol.chart');
+                Route::get('/average-rate', [KeyOpinionLeaderController::class, 'averageRate'])->name('kol.averageRate');
+                Route::get('/create', [KeyOpinionLeaderController::class, 'create'])->name('kol.create');
+                Route::get('/create-excel', [KeyOpinionLeaderController::class, 'createExcelForm'])->name('kol.createExcel');
+                Route::post('/store', [KeyOpinionLeaderController::class, 'store'])->name('kol.store');
+                Route::post('/store-excel', [KeyOpinionLeaderController::class, 'storeExcel'])->name('kol.storeExcel');
+                Route::get('/{keyOpinionLeader}', [KeyOpinionLeaderController::class, 'show'])->name('kol.show');
+                Route::get('/{keyOpinionLeader}/json', [KeyOpinionLeaderController::class, 'showJson'])->name('kol.showJson');
+                Route::get('/{keyOpinionLeader}/edit', [KeyOpinionLeaderController::class, 'edit'])->name('kol.edit');
+                Route::get('/{keyOpinionLeader}/edit-data', [KeyOpinionLeaderController::class, 'getEditData'])->name('kol.editData');
+                Route::put('/{keyOpinionLeader}', [KeyOpinionLeaderController::class, 'update'])->name('kol.update');
+                Route::delete('/{keyOpinionLeader}', [KeyOpinionLeaderController::class, 'destroy'])->name('kol.destroy');
+                Route::get('/export/excel', [KeyOpinionLeaderController::class, 'export'])->name('kol.export');
+                Route::get('/refresh/{username}', [KeyOpinionLeaderController::class, 'refreshFollowersFollowing'])->name('kol.refresh');
+                Route::get('/refresh-single/{username}', [KeyOpinionLeaderController::class, 'refreshFollowersFollowingSingle'])->name('kol.refreshSingle');
+                Route::post('/import-google-sheet', [KeyOpinionLeaderController::class, 'importKeyOpinionLeaders'])->name('kol.importGoogle');
+                Route::get('/bulk-usernames', [KeyOpinionLeaderController::class, 'getBulkUsernames'])->name('kol.bulkUsernames');
             });
 
         

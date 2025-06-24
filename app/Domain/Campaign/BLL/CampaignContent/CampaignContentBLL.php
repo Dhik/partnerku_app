@@ -112,17 +112,26 @@ class CampaignContentBLL implements CampaignContentBLLInterface
     {
         // Fetch data from the request
         $data = $request->only(['username', 'channel', 'rate_card', 'task_name', 'link', 'product', 'boost_code', 'kode_ads']);
+        
+        $user = Auth::user();
 
-        // Check if the KOL exists
-        $existingKOL = KeyOpinionLeader::where('username', $data['username'])->first();
+        // Check if the KOL exists with tenant filtering
+        $existingKOLQuery = KeyOpinionLeader::where('username', $data['username']);
+        
+        // Apply tenant filter for client users
+        if ($user->hasRole(['client_1', 'client_2'])) {
+            $existingKOLQuery->where('tenant_id', $user->current_tenant_id);
+        }
+        
+        $existingKOL = $existingKOLQuery->first();
 
         if ($existingKOL) {
             // If the record exists, update it without modifying average_view and cpm
             $existingKOL->update([
                 'channel' => $data['channel'],
                 'rate' => $data['rate_card'],
-                'created_by' => Auth::user()->id,
-                'pic_contact' => Auth::user()->id,
+                'created_by' => $user->id,
+                'pic_contact' => $user->id,
             ]);
             $kol = $existingKOL;
         } else {
@@ -132,13 +141,13 @@ class CampaignContentBLL implements CampaignContentBLLInterface
                 'channel' => $data['channel'],
                 'niche' => '-',
                 'average_view' => 0,
-                'skin_type' => '-',
-                'skin_concern' => '-',
                 'content_type' => '-',
                 'rate' => $data['rate_card'],
                 'cpm' => 0,
-                'created_by' => Auth::user()->id,
-                'pic_contact' => Auth::user()->id,
+                'status_recommendation' => 'Worth it', // Default status
+                'created_by' => $user->id,
+                'pic_contact' => $user->id,
+                'tenant_id' => $user->current_tenant_id, // Set tenant_id
             ]);
         }
 
@@ -153,8 +162,9 @@ class CampaignContentBLL implements CampaignContentBLLInterface
             'channel' => $data['channel'],
             'boost_code' => $data['boost_code'],
             'kode_ads' => $data['kode_ads'],
-            'created_by' => Auth::user()->id,
+            'created_by' => $user->id,
             'campaign_id' => $campaignId,
+            'tenant_id' => $user->current_tenant_id, // Add tenant_id if CampaignContent also uses tenancy
         ];
 
         // Store the campaign content

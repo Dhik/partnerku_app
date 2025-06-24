@@ -112,16 +112,14 @@ class PermissionTableSeeder extends Seeder
         $superadmin->givePermissionTo($campaignContentPermissions);
         $superadmin->givePermissionTo($kolPermissions);
 
-        // Client1 - Can CRUD campaigns and campaign_contents for their brand, monitoring, input budget
+        // Client1 - Can CRUD campaigns, campaign_contents, and KOLs for their brand, monitoring, input budget
         $client1 = Role::findByName(RoleEnum::Client1);
         $client1->givePermissionTo($profilePermissions);
         $client1->givePermissionTo($campaignPermissions); // Full CRUD for campaigns
         $client1->givePermissionTo($campaignContentPermissions); // Full CRUD for campaign contents
-        $client1->givePermissionTo([
-            Permission::findByName(PermissionEnum::ViewKOL) // Only view KOL for selecting
-        ]);
+        $client1->givePermissionTo($kolPermissions); // Full CRUD for KOLs
 
-        // Client2 - Monitor only (views, comment, likes, engagement rate, campaigns, campaign_contents)
+        // Client2 - Monitor only (views, comment, likes, engagement rate, campaigns, campaign_contents, KOLs)
         $client2 = Role::findByName(RoleEnum::Client2);
         $client2->givePermissionTo($profilePermissions);
         $client2->givePermissionTo([
@@ -130,13 +128,14 @@ class PermissionTableSeeder extends Seeder
             Permission::findByName(PermissionEnum::ViewKOL) // Only view for monitoring
         ]);
 
-        // TimInternal - View campaigns and campaign_contents only (no edit/delete)
+        // TimInternal - Create and Read KOLs, view campaigns and campaign_contents (no edit/delete)
         $timInternal = Role::findByName(RoleEnum::TimInternal);
         $timInternal->givePermissionTo($profilePermissions);
         $timInternal->givePermissionTo([
             Permission::findByName(PermissionEnum::ViewCampaign),
             Permission::findByName(PermissionEnum::ViewCampaignContent),
-            Permission::findByName(PermissionEnum::ViewKOL) // Only view
+            Permission::findByName(PermissionEnum::CreateKOL), // Can create KOLs
+            Permission::findByName(PermissionEnum::ViewKOL) // Can view KOLs
         ]);
 
         // TimAds - Full KOL management, view campaigns and campaign_contents
