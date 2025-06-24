@@ -1030,4 +1030,46 @@ class KeyOpinionLeaderController extends Controller
             'count' => count($usernames)
         ]);
     }
+    public function getCampaignHistory(string $username): JsonResponse
+    {
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
+        
+        try {
+            // Get campaign contents and statistics for this username
+            $campaignHistory = DB::table('campaign_contents')
+                ->join('campaigns', 'campaign_contents.campaign_id', '=', 'campaigns.id')
+                ->leftJoin('statistics', function($join) {
+                    $join->on('campaign_contents.id', '=', 'statistics.campaign_content_id')
+                         ->whereRaw('statistics.date = (SELECT MAX(date) FROM statistics s2 WHERE s2.campaign_content_id = campaign_contents.id)');
+                })
+                ->where('campaign_contents.username', $username)
+                ->select(
+                    'campaigns.title as campaign_title',
+                    'campaign_contents.task_name',
+                    'campaign_contents.upload_date',
+                    'campaign_contents.rate_card',
+                    'statistics.view as views',
+                    'statistics.like as likes',
+                    'statistics.comment as comments',
+                    'statistics.cpm'
+                )
+                ->orderBy('campaign_contents.upload_date', 'desc')
+                ->limit(20)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $campaignHistory
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching campaign history: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch campaign history',
+                'data' => []
+            ], 500);
+        }
+    }
 }
