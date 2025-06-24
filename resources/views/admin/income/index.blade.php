@@ -1,4 +1,3 @@
-{{-- Income View (admin/income/index.blade.php) --}}
 @extends('adminlte::page')
 
 @section('title', 'Income Management')
@@ -64,8 +63,8 @@
                     </div>
                     <div class="form-group">
                         <label for="team_in_charge">Team In Charge <span class="required">*</span></label>
-                        <select class="form-control" id="team_in_charge" name="team_in_charge[]" multiple required style="display: none !important;">
-                            <!-- Options will be loaded via AJAX -->
+                        <select class="form-control" id="team_in_charge" name="team_in_charge[]" multiple style="display: none !important;">
+                            <!-- Options will be loaded via JavaScript -->
                         </select>
                         <small class="form-text text-muted">Select multiple team members</small>
                     </div>
@@ -117,6 +116,8 @@
         </div>
     </div>
 </div>
+
+
 @stop
 
 @section('css')
@@ -546,11 +547,23 @@ class CustomMultiSelect {
 let teamMultiSelect = null;
 
 $(document).ready(function() {
-    // Users data is already available from the controller
-    const usersData = @json($users ?? []);
+    // Get users data from the controller
+    @if(isset($users) && is_array($users))
+        const usersData = @json($users);
+    @else
+        const usersData = [];
+    @endif
     
     // Initialize custom multiselect with users data
-    initializeCustomMultiSelect(usersData);
+    if (usersData && usersData.length > 0) {
+        initializeCustomMultiSelect(usersData);
+    } else {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Warning',
+            text: 'No users available for team selection. Please check if users exist and are verified.'
+        });
+    }
     
     // Initialize DataTable
     $('#incomeTable').DataTable({
@@ -574,6 +587,16 @@ $(document).ready(function() {
         // Get selected team members from custom multiselect
         let selectedTeam = teamMultiSelect ? teamMultiSelect.getSelectedValues() : [];
         
+        // Custom validation for team selection
+        if (!selectedTeam || selectedTeam.length === 0) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Validation Error!',
+                text: 'Please select at least one team member.'
+            });
+            return;
+        }
+        
         // Get form data as object
         let formData = {
             'nama_client': $('#nama_client').val(),
@@ -591,14 +614,11 @@ $(document).ready(function() {
             formData['_method'] = 'PUT';
         }
 
-        console.log('Submitting data:', formData); // Debug log
-
         $.ajax({
             url: url,
             method: 'POST',
             data: formData,
             success: function(response) {
-                console.log('Success response:', response); // Debug log
                 if (response.success) {
                     $('#incomeModal').modal('hide');
                     $('#incomeTable').DataTable().ajax.reload();
@@ -613,7 +633,6 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
-                console.log('Error response:', xhr.responseJSON); // Debug log
                 handleFormErrors(xhr);
             }
         });
@@ -624,50 +643,58 @@ function initializeCustomMultiSelect(users) {
     const $select = $('#team_in_charge');
     const $formGroup = $select.closest('.form-group');
     
-    // Clear existing options and add users from controller
-    $select.empty();
-    users.forEach(function(user) {
-        $select.append(`<option value="${user.id}">${user.name}</option>`);
-    });
-    
-    // Create custom multi-select HTML
-    let customMultiSelectHtml = `
-        <div class="custom-multiselect" data-name="team_in_charge" data-placeholder="Select team members...">
-            <div class="multiselect-container">
-                <div class="multiselect-input-container">
-                    <div class="selected-items"></div>
-                    <input type="text" class="multiselect-search" placeholder="Select team members..." autocomplete="off">
-                    <i class="fas fa-chevron-down multiselect-arrow"></i>
-                </div>
-                <div class="multiselect-dropdown">
-                    <div class="multiselect-options">
-    `;
-    
-    // Add options from users data
-    users.forEach(function(user) {
-        customMultiSelectHtml += `
-            <div class="multiselect-option" data-value="${user.id}" data-text="${user.name}">
-                <span class="option-text">${user.name}</span>
-                <i class="fas fa-check option-check"></i>
-            </div>
+    try {
+        // Clear existing options and add users from controller
+        $select.empty();
+        users.forEach(function(user) {
+            $select.append(`<option value="${user.id}">${user.name}</option>`);
+        });
+        
+        // Create custom multi-select HTML
+        let customMultiSelectHtml = `
+            <div class="custom-multiselect" data-name="team_in_charge" data-placeholder="Select team members...">
+                <div class="multiselect-container">
+                    <div class="multiselect-input-container">
+                        <div class="selected-items"></div>
+                        <input type="text" class="multiselect-search" placeholder="Select team members..." autocomplete="off">
+                        <i class="fas fa-chevron-down multiselect-arrow"></i>
+                    </div>
+                    <div class="multiselect-dropdown">
+                        <div class="multiselect-options">
         `;
-    });
-    
-    customMultiSelectHtml += `
+        
+        // Add options from users data
+        users.forEach(function(user) {
+            customMultiSelectHtml += `
+                <div class="multiselect-option" data-value="${user.id}" data-text="${user.name}">
+                    <span class="option-text">${user.name}</span>
+                    <i class="fas fa-check option-check"></i>
+                </div>
+            `;
+        });
+        
+        customMultiSelectHtml += `
+                        </div>
                     </div>
                 </div>
+                <!-- Hidden inputs for form submission -->
+                <div class="multiselect-hidden-inputs"></div>
             </div>
-            <!-- Hidden inputs for form submission -->
-            <div class="multiselect-hidden-inputs"></div>
-        </div>
-    `;
-    
-    // Insert the custom multi-select after the original select
-    $select.after(customMultiSelectHtml);
-    
-    // Initialize the custom multi-select
-    const customElement = $formGroup.find('.custom-multiselect')[0];
-    teamMultiSelect = new CustomMultiSelect(customElement);
+        `;
+        
+        // Insert the custom multi-select after the original select
+        $select.after(customMultiSelectHtml);
+        
+        // Initialize the custom multi-select
+        const customElement = $formGroup.find('.custom-multiselect')[0];
+        if (customElement) {
+            teamMultiSelect = new CustomMultiSelect(customElement);
+        } else {
+            throw new Error('Custom multiselect element not found');
+        }
+    } catch (error) {
+        console.error('Error initializing custom multiselect:', error);
+    }
 }
 
 function createIncome() {
@@ -696,6 +723,13 @@ function editIncome(id) {
                 $('#incomeModalLabel').text('Edit Income');
                 $('#incomeModal').modal('show');
             }
+        },
+        error: function(xhr) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: 'Failed to load income data for editing'
+            });
         }
     });
 }
