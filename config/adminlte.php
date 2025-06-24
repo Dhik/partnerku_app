@@ -345,13 +345,6 @@ return [
                     'can' => [PermissionEnum::ViewCampaign],
                     'active' => ['admin/campaign*']
                 ],
-                [
-                    'text' => 'Key Opinion Leaders',
-                    'url' => 'admin/kol',
-                    'icon' => 'nav-icon far fa-circle',
-                    'can' => [PermissionEnum::ViewKOL],
-                    'active' => ['admin/kol*']
-                ],
             ]
         ],
         
