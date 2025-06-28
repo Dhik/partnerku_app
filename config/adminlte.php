@@ -317,6 +317,12 @@ return [
             'can' => [PermissionEnum::ViewIncome],
         ],
         [
+            'text' => 'Niche Management',
+            'url' => 'admin/niche',
+            'icon' => 'fas fa-tags',
+            'can' => [PermissionEnum::ViewIncome], // Add appropriate permission
+        ],
+        [
             'text' => 'Payroll',
             'url' => 'admin/payroll',
             'icon' => 'nav-icon far fa-circle text-info',

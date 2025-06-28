@@ -178,6 +178,7 @@ return [
         App\Domain\OtherSpent\Providers\OtherSpentProvider::class,
         App\Domain\Payroll\Providers\PayrollProvider::class,
         App\Domain\User\Providers\UserProvider::class,
+        App\Domain\Niche\Providers\NicheProvider::class,
     ])->toArray(),
 
     /*
