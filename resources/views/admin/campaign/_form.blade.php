@@ -24,8 +24,6 @@
     </div>
 </div>
 
-
-
 <div class="form-group row">
     <label for="title" class="col-md-3 col-form-label text-md-right">
         {{ trans('labels.period') }}<span class="required">*</span>
@@ -71,6 +69,35 @@
     </div>
 </div>
 
+{{-- Add CPM Benchmark field --}}
+<div class="form-group row">
+    <label for="cpm_benchmark" class="col-md-3 col-form-label text-md-right">
+        CPM Benchmark
+    </label>
+
+    <div class="col-md-6">
+        <input
+            id="cpm_benchmark"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control @error('cmp_benchmark') is-invalid @enderror"
+            name="cpm_benchmark"
+            value="{{ old('cpm_benchmark', $edit ? $campaign->cpm_benchmark : '0.00') }}"
+            placeholder="Enter CPM benchmark value"
+            autocomplete="cpm_benchmark">
+
+        @error('cpm_benchmark')
+            <span class="invalid-feedback" role="alert">
+                <strong>{{ $message }}</strong>
+            </span>
+        @enderror
+        
+        <small class="form-text text-muted">
+            Set the CPM benchmark for this campaign (default: 0.00)
+        </small>
+    </div>
+</div>
 
 <div class="form-group row mb-0">
     <div class="col-md-6 offset-md-3">
@@ -79,5 +106,3 @@
         </button>
     </div>
 </div>
-
-

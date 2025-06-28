@@ -241,9 +241,21 @@ $(document).ready(function() {
         ModalManager.clearErrors('#contentModal');
         CampaignUtils.setButtonLoading(submitBtn, true);
         
+        // Determine URL
+        let storeUrl = form.attr('action');
+        if (!storeUrl && typeof window.campaignContentStoreUrl !== 'undefined') {
+            storeUrl = window.campaignContentStoreUrl;
+        }
+        
+        if (!storeUrl) {
+            CampaignUtils.showToast('Store URL is not configured', 'error');
+            CampaignUtils.setButtonLoading(submitBtn, false);
+            return;
+        }
+        
         $.ajax({
             type: 'POST',
-            url: form.attr('action') || window.campaignContentStoreUrl,
+            url: storeUrl,
             data: new FormData(form[0]),
             processData: false,
             contentType: false,
@@ -273,14 +285,27 @@ $(document).ready(function() {
         const contentId = $('#contentId').val();
         const submitBtn = form.find('button[type="submit"]');
         
-        if (!contentId) return;
+        if (!contentId) {
+            CampaignUtils.showToast('Content ID is missing', 'error');
+            return;
+        }
+        
+        // Build update URL
+        let updateUrl;
+        if (typeof window.campaignContentUpdateUrl !== 'undefined') {
+            updateUrl = window.campaignContentUpdateUrl.replace(':campaignContentId', contentId);
+        } else {
+            CampaignUtils.showToast('Update URL is not configured', 'error');
+            console.error('window.campaignContentUpdateUrl is not defined');
+            return;
+        }
         
         ModalManager.clearErrors('#contentUpdateModal');
         CampaignUtils.setButtonLoading(submitBtn, true);
         
         $.ajax({
             type: 'PUT',
-            url: window.campaignContentUpdateUrl.replace(':campaignContentId', contentId),
+            url: updateUrl,
             data: new FormData(form[0]),
             processData: false,
             contentType: false,
@@ -311,6 +336,13 @@ $(document).ready(function() {
         const rowData = window.contentTable ? TableManager.getRowData(window.contentTable, this) : null;
         if (!rowData) return;
 
+        // Check if URL is defined
+        if (typeof window.campaignContentDestroyUrl === 'undefined') {
+            CampaignUtils.showToast('Delete URL is not configured', 'error');
+            console.error('window.campaignContentDestroyUrl is not defined');
+            return;
+        }
+
         CampaignUtils.confirmDelete('Delete Content', 'Are you sure you want to delete this content?')
             .then((result) => {
                 if (result.isConfirmed) {
@@ -336,6 +368,13 @@ $(document).ready(function() {
         const button = $(this);
         const rowData = window.contentTable ? TableManager.getRowData(window.contentTable, this) : null;
         if (!rowData) return;
+
+        // Check if URL is defined
+        if (typeof window.campaignContentUpdateUrl === 'undefined') {
+            CampaignUtils.showToast('Update URL is not configured', 'error');
+            console.error('window.campaignContentUpdateUrl is not defined');
+            return;
+        }
 
         let actionType = '';
         if (button.hasClass('btnFyp')) actionType = 'fyp';
@@ -379,6 +418,13 @@ $(document).ready(function() {
         const button = $(this);
         const campaignId = button.data('id');
         
+        // Check if URL is defined
+        if (typeof window.campaignDestroyUrl === 'undefined') {
+            CampaignUtils.showToast('Delete URL is not configured', 'error');
+            console.error('window.campaignDestroyUrl is not defined');
+            return;
+        }
+        
         CampaignUtils.confirmDelete('Delete Campaign', 'This campaign and all its content will be deleted.')
             .then((result) => {
                 if (result.isConfirmed) {
@@ -408,6 +454,22 @@ $(document).ready(function() {
 
 // Copy text to clipboard
 function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        // Modern clipboard API
+        navigator.clipboard.writeText(text).then(() => {
+            console.log('Text copied to clipboard');
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            fallbackCopyToClipboard(text);
+        });
+    } else {
+        // Fallback method
+        fallbackCopyToClipboard(text);
+    }
+}
+
+// Fallback copy method
+function fallbackCopyToClipboard(text) {
     const tempInput = document.createElement('input');
     tempInput.style.position = 'absolute';
     tempInput.style.left = '-9999px';

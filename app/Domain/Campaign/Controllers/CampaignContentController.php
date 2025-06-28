@@ -327,9 +327,14 @@ class CampaignContentController extends Controller
     /**
      * Update campaign content
      */
+    
     public function update(CampaignContent $campaignContent, CampaignUpdateContentRequest $request): JsonResponse
     {
         $this->authorize('updateCampaignContent', CampaignContent::class);
+
+        // Debug logging
+        \Log::info('Update request data:', $request->all());
+        \Log::info('Current campaign content data:', $campaignContent->toArray());
 
         return response()->json(
             $this->campaignContentBLL->updateCampaignContent($campaignContent, $request)

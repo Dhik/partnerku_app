@@ -148,11 +148,17 @@
 @section('adminlte_js')
     <script src="{{ asset('js/campaign-enhanced.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+
     <script>
         const campaignId = '{{ $campaign->id }}';
         let campaignContentChart;
-        
+
+        // ===== URL CONFIGURATION FOR CAMPAIGN ENHANCED JS =====
+        window.campaignContentUpdateUrl = "{{ route('campaignContent.update', ':campaignContentId') }}";
+        window.campaignContentDestroyUrl = "{{ route('campaignContent.destroy', ':campaignContentId') }}";
+        window.campaignContentStoreUrl = "{{ route('campaignContent.store', ['campaignId' => $campaign->id]) }}";
+        window.campaignDestroyUrl = "{{ route('campaign.destroy', ':id') }}";
+
         $(document).ready(function() {
             
             // Initialize content table

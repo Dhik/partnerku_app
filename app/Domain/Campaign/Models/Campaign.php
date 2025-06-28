@@ -30,6 +30,7 @@ class Campaign extends Model implements HasMedia
         'total_expense',
         'achievement',
         'cpm',
+        'cpm_benchmark',
         'id_budget',
     ];
 
@@ -37,6 +38,7 @@ class Campaign extends Model implements HasMedia
         'period',
         'expense_formatted',
         'cpm_formatted',
+        'cpm_benchmark_formatted',
         'views_formatted'
     ];
 

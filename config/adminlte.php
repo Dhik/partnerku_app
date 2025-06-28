@@ -317,9 +317,9 @@ return [
             'can' => [PermissionEnum::ViewIncome],
         ],
         [
-            'text' => 'Niche Management',
+            'text' => 'Niche',
             'url' => 'admin/niche',
-            'icon' => 'fas fa-tags',
+            'icon' => 'nav-icon far fa-circle text-info',
             'can' => [PermissionEnum::ViewIncome], // Add appropriate permission
         ],
         [

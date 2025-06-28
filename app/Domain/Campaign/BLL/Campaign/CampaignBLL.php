@@ -70,6 +70,7 @@ class CampaignBLL extends BaseBLL implements CampaignBLLInterface
             'description' => $request->input('description'),
             'created_by' => Auth::user()->id,
             'id_budget' => $request->input('id_budget'),
+            'cpm_benchmark' => $request->input('cmp_benchmark', 0.00), // Add this line
         ];
 
         return $this->campaignDAL->storeCampaign($data);
