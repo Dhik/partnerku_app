@@ -108,106 +108,135 @@ class CampaignContentController extends Controller
     }
 
     public function getCampaignContentJson(int $campaignId, Request $request): JsonResponse
-    {
-        $this->authorize('viewCampaignContent', CampaignContent::class);
-        $query = $this->campaignContentBLL->getCampaignContentDataTable($campaignId, $request)->orderBy('upload_date', 'desc');
-        $campaignContents = $query->get()->map(function ($row) {
+{
+    $this->authorize('viewCampaignContent', CampaignContent::class);
+    
+    // Get the campaign to access cpm_benchmark
+    $campaign = Campaign::withoutGlobalScopes()->find($campaignId);
+    $cpmBenchmark = $campaign ? $campaign->cpm_benchmark : 0;
+    
+    $query = $this->campaignContentBLL->getCampaignContentDataTable($campaignId, $request)->orderBy('upload_date', 'desc');
+    $campaignContents = $query->get()->map(function ($row) use ($cpmBenchmark) {
 
-            $baseUsername = preg_replace('/\s*\(.*?\)\s*/', '', $row->username);
-            $keyOpinionLeader = KeyOpinionLeader::where('username', $baseUsername)->first();
-            $followers = $keyOpinionLeader->followers ?? 0;
+        $baseUsername = preg_replace('/\s*\(.*?\)\s*/', '', $row->username);
+        $keyOpinionLeader = KeyOpinionLeader::where('username', $baseUsername)->first();
+        $followers = $keyOpinionLeader->followers ?? 0;
 
-            $likes = $row->latestStatistic->like ?? 0;
-            $comments = $row->latestStatistic->comment ?? 0;
-            $views = $row->latestStatistic->view ?? 0;
-            $engagementRate = $views > 0 ? (($likes + $comments) / $views) * 100 : 0;
-
-            if ($followers >= 1000 && $followers < 10000) {
-                $tiering = "<button class='btn btn-sm bg-info'>
-                                Nano
-                            </button>";
-                $er_top = 0.1;
-                $er_bottom = 0.04;
-                $cpm_target = 35000;
-            } elseif ($followers >= 10000 && $followers < 50000) {
-                $tiering = "<button class='btn btn-sm bg-purple'>
-                                Micro
-                            </button>";
-                $er_top = 0.05;
-                $er_bottom = 0.02;
-                $cpm_target = 35000;
-            } elseif ($followers >= 50000 && $followers < 250000) {
-                $tiering = "<button class='btn btn-sm bg-maroon'>
-                                Mid-Tier
-                            </button>";
-                $er_top = 0.03;
-                $er_bottom = 0.015;
-                $cpm_target = 25000;
-            } elseif ($followers >= 250000 && $followers < 1000000) {
-                $tiering = "<button class='btn btn-sm bg-success'>
-                                Macro TOFU
-                            </button>";
-                $er_top = 0.025;
-                $er_bottom = 0.01;
-                $cpm_target = 10000;
-            } elseif ($followers >= 1000000 && $followers < 2000000) {
-                $tiering = "<button class='btn btn-sm bg-teal'>
-                                Mega-TOFU
-                            </button>";
-                $er_top = 0.02;
-                $er_bottom = 0.01;
-                $cpm_target = 10000;
-            } elseif ($followers >= 2000000) {
-                $tiering = "<button class='btn btn-sm bg-pink'>
-                                Mega-MOFU
-                            </button>";
-                $er_top = 0.02;
-                $er_bottom = 0.01;
-                $cpm_target = 35000;
+        $likes = $row->latestStatistic->like ?? 0;
+        $comments = $row->latestStatistic->comment ?? 0;
+        $views = $row->latestStatistic->view ?? 0;
+        $engagementRate = $views > 0 ? (($likes + $comments) / $views) * 100 : 0;
+        
+        // Get actual CPM from statistics
+        $actualCpm = $row->latestStatistic->cpm ?? 0;
+        
+        // Determine CPM worthiness label
+        $cpmLabel = '';
+        $cpmLabelClass = '';
+        if ($actualCpm > 0 && $cpmBenchmark > 0) {
+            if ($actualCpm <= $cpmBenchmark) {
+                $cpmLabel = 'Worth It!';
+                $cpmLabelClass = 'text-success';
             } else {
-                $tiering = "Unknown";
-                $er_top = null;
-                $er_bottom = null;
-                $cpm_target = null;
+                $cpmLabel = 'Not Worth It';
+                $cpmLabelClass = 'text-danger';
             }
+        }
 
-            // Return the transformed row data
-            return [
-                'id' => $row->id,
-                'channel' => $row->channel,
-                'product' => $row->product,
-                'task' => $row->task_name,
-                'is_fyp' => $row->is_fyp,
-                'username' => $row->username,
-                'upload_date' => $row->upload_date,
-                'kode_ads' => $row->kode_ads,
-                'rate_card' => $row->rate_card,
-                'is_product_deliver' => $row->is_product_deliver,
-                'is_paid' => $row->is_paid,
-                'created_by_name' => $row->createdBy->name ?? 'N/A',
-                'key_opinion_leader_username' => $row->keyOpinionLeader->username ?? 'N/A',
-                'kol_followers' => $followers,
-                'like' => !empty($row->latestStatistic->like) ? abs($row->latestStatistic->like) : 0,
-                'comment' => $row->latestStatistic->comment ?? 0,
-                'view' => $row->latestStatistic->view ?? 0,
-                'cpm' => number_format($row->latestStatistic->cpm ?? 0, 2, ',', '.'),
-                'rate_card_formatted' => number_format($row->rate_card, 0, ',', '.'),
-                'link' => $row->link ?? 'N/A',
-                'additional_info' => $this->additionalInfo($row),
-                'actions' => $this->actionsHtml($row),
-                'engagement_rate' => number_format($engagementRate, 2) . '%',
-                'tiering' => $tiering,
-                'er_top' => $er_top,
-                'er_bottom' => $er_bottom,
-                'cpm_target' => $cpm_target,
-            ];
-        });
+        if ($followers >= 1000 && $followers < 10000) {
+            $tiering = "<button class='btn btn-sm bg-info'>
+                            Nano
+                        </button>";
+            $er_top = 0.1;
+            $er_bottom = 0.04;
+            $cpm_target = 35000;
+        } elseif ($followers >= 10000 && $followers < 50000) {
+            $tiering = "<button class='btn btn-sm bg-purple'>
+                            Micro
+                        </button>";
+            $er_top = 0.05;
+            $er_bottom = 0.02;
+            $cpm_target = 35000;
+        } elseif ($followers >= 50000 && $followers < 250000) {
+            $tiering = "<button class='btn btn-sm bg-maroon'>
+                            Mid-Tier
+                        </button>";
+            $er_top = 0.03;
+            $er_bottom = 0.015;
+            $cpm_target = 25000;
+        } elseif ($followers >= 250000 && $followers < 1000000) {
+            $tiering = "<button class='btn btn-sm bg-success'>
+                            Macro TOFU
+                        </button>";
+            $er_top = 0.025;
+            $er_bottom = 0.01;
+            $cpm_target = 10000;
+        } elseif ($followers >= 1000000 && $followers < 2000000) {
+            $tiering = "<button class='btn btn-sm bg-teal'>
+                            Mega-TOFU
+                        </button>";
+            $er_top = 0.02;
+            $er_bottom = 0.01;
+            $cpm_target = 10000;
+        } elseif ($followers >= 2000000) {
+            $tiering = "<button class='btn btn-sm bg-pink'>
+                            Mega-MOFU
+                        </button>";
+            $er_top = 0.02;
+            $er_bottom = 0.01;
+            $cpm_target = 35000;
+        } else {
+            $tiering = "Unknown";
+            $er_top = null;
+            $er_bottom = null;
+            $cpm_target = null;
+        }
 
-        // Return the campaign content data in JSON format
-        return response()->json([
-            'data' => $campaignContents
-        ]);
-    }
+        // Format CPM with label
+        $cpmFormatted = number_format($actualCpm, 2, ',', '.');
+        if ($cpmLabel) {
+            $cpmWithLabel = $cpmFormatted . '<br><small class="' . $cpmLabelClass . '">' . $cpmLabel . '</small>';
+        } else {
+            $cpmWithLabel = $cpmFormatted;
+        }
+
+        // Return the transformed row data
+        return [
+            'id' => $row->id,
+            'channel' => $row->channel,
+            'product' => $row->product,
+            'task' => $row->task_name,
+            'is_fyp' => $row->is_fyp,
+            'username' => $row->username,
+            'upload_date' => $row->upload_date,
+            'kode_ads' => $row->kode_ads,
+            'rate_card' => $row->rate_card,
+            'is_product_deliver' => $row->is_product_deliver,
+            'is_paid' => $row->is_paid,
+            'created_by_name' => $row->createdBy->name ?? 'N/A',
+            'key_opinion_leader_username' => $row->keyOpinionLeader->username ?? 'N/A',
+            'kol_followers' => $followers,
+            'like' => !empty($row->latestStatistic->like) ? abs($row->latestStatistic->like) : 0,
+            'comment' => $row->latestStatistic->comment ?? 0,
+            'view' => $row->latestStatistic->view ?? 0,
+            'cpm' => $cpmWithLabel, // Updated to include label
+            'rate_card_formatted' => number_format($row->rate_card, 0, ',', '.'),
+            'link' => $row->link ?? 'N/A',
+            'additional_info' => $this->additionalInfo($row),
+            'actions' => $this->actionsHtml($row),
+            'engagement_rate' => number_format($engagementRate, 2) . '%',
+            'tiering' => $tiering,
+            'er_top' => $er_top,
+            'er_bottom' => $er_bottom,
+            'cpm_target' => $cpm_target,
+        ];
+    });
+
+    // Return the campaign content data in JSON format
+    return response()->json([
+        'data' => $campaignContents
+    ]);
+}
 
 
 

@@ -13,34 +13,30 @@ class UserUpdateRequest extends FormRequest
      * @return bool
      */
     public function authorize()
-    {
-        // Get the current authenticated user
-        $currentUser = auth()->user();
+{
+    $currentUser = auth()->user();
 
-        if ($currentUser->hasRole(RoleEnum::BrandManager)) {
-            // Define the roles that should not be allowed for creation
-            $forbiddenRoles = [RoleEnum::SuperAdmin, RoleEnum::BrandManager];
-
-            // Check if any forbidden role exists in the input roles array
-            if (count(array_intersect($this->input('roles', []), $forbiddenRoles)) > 0) {
-                return false; // Deny authorization
-            }
-
-            $assignedTenants = $this->input('tenants', []);
-            $currentUserTenant = $currentUser->tenants()->get()->pluck('id')->toArray();
-
-            // Find the difference between assigned tenants and user's tenants
-            $missingTenants = array_diff($assignedTenants, $currentUserTenant);
-
-            // If the difference is empty, all assigned tenants exist for the user
-            if (! empty($missingTenants)) {
-                return false;
-            }
-        }
-
+    if ($currentUser->hasRole(RoleEnum::SuperAdmin)) {
+        // Superadmin can assign any role and any tenant
         return true;
     }
 
+    // For non-superadmin users, apply the tenant restrictions
+    $assignedTenants = $this->input('tenants', []);
+    $currentUserTenants = $currentUser->tenants()->get()->pluck('id')->map('strval')->toArray();
+
+    if (empty($assignedTenants)) {
+        return true;
+    }
+
+    $missingTenants = array_diff($assignedTenants, $currentUserTenants);
+
+    if (!empty($missingTenants)) {
+        return false;
+    }
+
+    return true;
+}
     /**
      * Get the validation rules that apply to the request.
      *

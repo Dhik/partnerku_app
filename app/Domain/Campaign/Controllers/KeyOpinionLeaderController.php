@@ -10,6 +10,7 @@ use App\Domain\Campaign\Models\Statistic;
 use App\Domain\Campaign\Requests\KeyOpinionLeaderRequest;
 use App\Domain\Campaign\Requests\KolExcelRequest;
 use App\Domain\User\Models\User;
+use App\Domain\Niche\Models\Niche;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -39,7 +40,7 @@ class KeyOpinionLeaderController extends Controller
     protected function getCommonData(): array
     {
         $channels = KeyOpinionLeaderEnum::Channel ?? ['tiktok_video', 'instagram_feed', 'youtube_video'];
-        $niches = KeyOpinionLeaderEnum::Niche ?? ['beauty', 'fashion', 'lifestyle', 'tech'];
+        $niches = Niche::orderBy('name')->get();
         $skinTypes = KeyOpinionLeaderEnum::SkinType ?? ['normal', 'oily', 'dry', 'combination'];
         $skinConcerns = KeyOpinionLeaderEnum::SkinConcern ?? ['acne', 'aging', 'dullness', 'sensitivity'];
         $contentTypes = KeyOpinionLeaderEnum::ContentType ?? ['review', 'tutorial', 'unboxing', 'lifestyle'];

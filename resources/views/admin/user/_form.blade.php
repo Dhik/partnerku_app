@@ -150,28 +150,27 @@
         {{ trans('labels.roles') }}<span class="required">*</span>
     </label>
     <div class="col-md-6">
-        <div class="input-group">
-            <select
-                id="roles"
-                name="roles[]"
-                multiple="multiple"
-                class="form-control select2-multiple select2-hidden-accessible @error('roles') is-invalid @enderror"
-            >
+        <select
+            id="roles"
+            name="roles[]"
+            multiple="multiple"
+            class="form-control @error('roles') is-invalid @enderror"
+            style="width: 100%;"
+        >
+            @if(isset($roles))
                 @foreach($roles as $role)
-                    <option
-                        value="{{ $role['id'] }}" {{ in_array($role['id'], old('roles', $edit ? $user->roles->pluck('name')->toArray() : [])) ? 'selected' : '' }}
-                    >
+                    <option value="{{ $role['id'] }}" 
+                        {{ in_array($role['id'], old('roles', $edit ? $user->roles->pluck('name')->toArray() : [])) ? 'selected' : '' }}>
                         {{ $role['label'] }}
                     </option>
                 @endforeach
-            </select>
-
-            @error('roles')
-            <span class="invalid-feedback" role="alert">
-                    <strong>{{ $message }}</strong>
-                </span>
-            @enderror
-        </div>
+            @endif
+        </select>
+        @error('roles')
+        <span class="invalid-feedback" role="alert">
+            <strong>{{ $message }}</strong>
+        </span>
+        @enderror
     </div>
 </div>
 
@@ -180,30 +179,32 @@
         {{ trans('labels.tenant') }}
     </label>
     <div class="col-md-6">
-        <div class="input-group">
-            <select
-                id="tenants"
-                name="tenants[]"
-                multiple="multiple"
-                class="form-control select2-multiple select2-hidden-accessible @error('tenants') is-invalid @enderror"
-            >
+        <select
+            id="tenants"
+            name="tenants[]"
+            multiple="multiple"
+            class="form-control @error('tenants') is-invalid @enderror"
+            style="width: 100%;"
+        >
+            @if(isset($tenants))
                 @foreach($tenants as $tenant)
-                    <option
-                        value="{{ $tenant['id'] }}" {{ in_array($tenant['id'], old('roles', $edit ? $user->tenants()->pluck('id')->toArray() : [])) ? 'selected' : '' }}
-                    >
+                    <option value="{{ $tenant['id'] }}" 
+                        {{ in_array($tenant['id'], old('tenants', $edit ? $user->tenants->pluck('id')->toArray() : [])) ? 'selected' : '' }}>
                         {{ $tenant['name'] }}
                     </option>
                 @endforeach
-            </select>
-
-            @error('roles')
-            <span class="invalid-feedback" role="alert">
-                <strong>{{ $message }}</strong>
-            </span>
-            @enderror
-        </div>
+            @else
+                <option value="">No tenants available</option>
+            @endif
+        </select>
+        @error('tenants')
+        <span class="invalid-feedback" role="alert">
+            <strong>{{ $message }}</strong>
+        </span>
+        @enderror
     </div>
 </div>
+
 
 <div class="form-group row mb-0">
     <div class="col-md-6 offset-md-3">

@@ -145,4 +145,11 @@ class Campaign extends Model implements HasMedia
 
         return $n_format . $suffix;
     }
+    /**
+     * Return CPM Benchmark format
+     */
+    public function getCpmBenchmarkFormattedAttribute(): string
+    {
+        return number_format($this->cpm_benchmark, '2', ',', '.');
+    }
 }

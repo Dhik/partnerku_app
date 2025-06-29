@@ -11,16 +11,25 @@
         </div>
     </div>
     <div class="col-md-4">
-        <div class="small-box bg-white">
-            <div class="inner">
-                <h4 id="totalCPM">0</h4>
-                <p>Cost Per Mile</p>
+    <div class="small-box bg-white">
+        <div class="inner">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="text-left">
+                    <h4 id="totalCPM" class="mb-0">0</h4>
+                    <small class="text-success">Actual</small>
+                </div>
+                <div class="text-right">
+                    <h4 id="cpmBenchmark" class="mb-0">0</h4>
+                    <small class="text-primary">Benchmark</small>
+                </div>
             </div>
-            <div class="icon">
-                <i class="fas fa-chart-bar text-gray"></i>
-            </div>
+            <p class="mb-0">Cost Per Mile</p>
+        </div>
+        <div class="icon">
+            <i class="fas fa-chart-bar text-gray"></i>
         </div>
     </div>
+</div>
     <div class="col-md-4">
         <div class="small-box bg-white">
             <div class="inner">

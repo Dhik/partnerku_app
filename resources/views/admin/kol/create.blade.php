@@ -119,8 +119,8 @@
                                     name="niche">
                                 <option value="">Select Niche</option>
                                 @foreach($niches as $niche)
-                                    <option value="{{ $niche }}" {{ old('niche') == $niche ? 'selected' : '' }}>
-                                        {{ ucfirst($niche) }}
+                                    <option value="{{ $niche->name }}" {{ old('niche') == $niche->name ? 'selected' : '' }}>
+                                        {{ ucfirst($niche->name) }}
                                     </option>
                                 @endforeach
                             </select>
@@ -176,21 +176,6 @@
                             @error('rate')
                                 <span class="invalid-feedback">{{ $message }}</span>
                             @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="average_view">Average Views (Last 10 Videos)</label>
-                            <input type="number" 
-                                   class="form-control @error('average_view') is-invalid @enderror" 
-                                   id="average_view" 
-                                   name="average_view" 
-                                   value="{{ old('average_view') }}"
-                                   min="0"
-                                   placeholder="0">
-                            @error('average_view')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                            <small class="form-text text-muted">Used for CPM calculation</small>
                         </div>
 
                         <div class="form-group">
@@ -252,8 +237,73 @@
         </div>
 
         <div class="row">
+            <!-- Video Links for Average View Calculation -->
+            <div class="col-md-12">
+                <div class="card card-info">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-video"></i> Video Links (For Average View Calculation)
+                        </h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool btn-sm" id="fetch-all-videos-btn">
+                                <i class="fas fa-sync-alt"></i> Fetch All Video Data
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @for($i = 1; $i <= 10; $i++)
+                            <div class="col-md-6 mb-3">
+                                <div class="form-group">
+                                    <label for="video_link_{{ $i }}">Video Link {{ $i }}</label>
+                                    <div class="input-group">
+                                        <input type="url" 
+                                               class="form-control video-link" 
+                                               id="video_link_{{ $i }}" 
+                                               name="video_links[]" 
+                                               placeholder="https://tiktok.com/@username/video/123..."
+                                               data-index="{{ $i }}">
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-outline-secondary fetch-single-video" data-index="{{ $i }}">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <small class="form-text">
+                                        <span class="video-status-{{ $i }} text-muted">Not fetched</span>
+                                        <span class="video-views-{{ $i }} text-info" style="display: none;"></span>
+                                    </small>
+                                </div>
+                            </div>
+                            @endfor
+                        </div>
+                        
+                        <!-- Video Stats Summary -->
+                        <div class="alert alert-secondary" id="video-stats" style="display: none;">
+                            <h6><i class="fas fa-chart-bar"></i> Video Statistics Summary</h6>
+                            <div class="row">
+                                <div class="col-3">
+                                    <strong>Total Videos:</strong> <span id="total-videos">0</span>
+                                </div>
+                                <div class="col-3">
+                                    <strong>Total Views:</strong> <span id="total-views">0</span>
+                                </div>
+                                <div class="col-3">
+                                    <strong>Average Views:</strong> <span id="calculated-average">0</span>
+                                </div>
+                                <div class="col-3">
+                                    <strong>Status:</strong> <span id="fetch-status" class="badge badge-info">Ready</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
             <!-- Contact & Management -->
-            <div class="col-md-6">
+            <div class="col-md-12">
                 <div class="card card-warning">
                     <div class="card-header">
                         <h3 class="card-title">
@@ -261,142 +311,71 @@
                         </h3>
                     </div>
                     <div class="card-body">
-                        <div class="form-group">
-                            <label for="pic_contact">PIC Contact</label>
-                            <select class="form-control @error('pic_contact') is-invalid @enderror" 
-                                    id="pic_contact" 
-                                    name="pic_contact">
-                                <option value="">Select PIC</option>
-                                @foreach($marketingUsers as $user)
-                                    <option value="{{ $user->id }}" 
-                                            {{ (old('pic_contact', Auth::id()) == $user->id) ? 'selected' : '' }}>
-                                        {{ $user->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('pic_contact')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="pic_contact">PIC Contact</label>
+                                    <select class="form-control @error('pic_contact') is-invalid @enderror" 
+                                            id="pic_contact" 
+                                            name="pic_contact">
+                                        <option value="">Select PIC</option>
+                                        @foreach($marketingUsers as $user)
+                                            <option value="{{ $user->id }}" 
+                                                    {{ (old('pic_contact', Auth::id()) == $user->id) ? 'selected' : '' }}>
+                                                {{ $user->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('pic_contact')
+                                        <span class="invalid-feedback">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="pic_listing">PIC Listing</label>
+                                    <input type="text" 
+                                           class="form-control @error('pic_listing') is-invalid @enderror" 
+                                           id="pic_listing" 
+                                           name="pic_listing" 
+                                           value="{{ old('pic_listing') }}"
+                                           placeholder="Person in charge of listing">
+                                    @error('pic_listing')
+                                        <span class="invalid-feedback">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="form-group">
-                            <label for="pic_listing">PIC Listing</label>
-                            <input type="text" 
-                                   class="form-control @error('pic_listing') is-invalid @enderror" 
-                                   id="pic_listing" 
-                                   name="pic_listing" 
-                                   value="{{ old('pic_listing') }}"
-                                   placeholder="Person in charge of listing">
-                            @error('pic_listing')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="pic_content">PIC Content</label>
-                            <input type="text" 
-                                   class="form-control @error('pic_content') is-invalid @enderror" 
-                                   id="pic_content" 
-                                   name="pic_content" 
-                                   value="{{ old('pic_content') }}"
-                                   placeholder="Person in charge of content">
-                            @error('pic_content')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="address">Address</label>
-                            <textarea class="form-control @error('address') is-invalid @enderror" 
-                                      id="address" 
-                                      name="address" 
-                                      rows="3"
-                                      placeholder="Enter complete address">{{ old('address') }}</textarea>
-                            @error('address')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Additional Information -->
-            <div class="col-md-6">
-                <div class="card card-info">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-info-circle"></i> Additional Information
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label for="category">Category</label>
-                            <input type="text" 
-                                   class="form-control @error('category') is-invalid @enderror" 
-                                   id="category" 
-                                   name="category" 
-                                   value="{{ old('category') }}"
-                                   placeholder="e.g., Beauty, Fashion, Tech">
-                            @error('category')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="tier">Tier</label>
-                            <select class="form-control @error('tier') is-invalid @enderror" 
-                                    id="tier" 
-                                    name="tier">
-                                <option value="">Auto-calculated based on followers</option>
-                                <option value="Nano" {{ old('tier') == 'Nano' ? 'selected' : '' }}>Nano (1K - 10K)</option>
-                                <option value="Micro" {{ old('tier') == 'Micro' ? 'selected' : '' }}>Micro (10K - 50K)</option>
-                                <option value="Mid-Tier" {{ old('tier') == 'Mid-Tier' ? 'selected' : '' }}>Mid-Tier (50K - 250K)</option>
-                                <option value="Macro" {{ old('tier') == 'Macro' ? 'selected' : '' }}>Macro (250K - 1M)</option>
-                                <option value="Mega" {{ old('tier') == 'Mega' ? 'selected' : '' }}>Mega (1M+)</option>
-                            </select>
-                            @error('tier')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="link">Profile Link</label>
-                            <input type="url" 
-                                   class="form-control @error('link') is-invalid @enderror" 
-                                   id="link" 
-                                   name="link" 
-                                   value="{{ old('link') }}"
-                                   placeholder="https://...">
-                            @error('link')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="status_recommendation">Status Recommendation</label>
-                            <select class="form-control @error('status_recommendation') is-invalid @enderror" 
-                                    id="status_recommendation" 
-                                    name="status_recommendation">
-                                <option value="">Auto-calculated based on CPM</option>
-                                <option value="Worth it" {{ old('status_recommendation') == 'Worth it' ? 'selected' : '' }}>Worth it</option>
-                                <option value="Gagal" {{ old('status_recommendation') == 'Gagal' ? 'selected' : '' }}>Gagal</option>
-                            </select>
-                            @error('status_recommendation')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                            <small class="form-text text-muted">Will be auto-calculated if left empty</small>
-                        </div>
-
-                        <!-- Quick Actions -->
-                        <div class="form-group">
-                            <label>Quick Actions</label>
-                            <div class="btn-group btn-group-sm d-block">
-                                <button type="button" class="btn btn-outline-primary" id="fetch-profile-btn">
-                                    <i class="fas fa-download"></i> Fetch Profile Data
-                                </button>
-                                <button type="button" class="btn btn-outline-success" id="validate-username-btn">
-                                    <i class="fas fa-check"></i> Validate Username
-                                </button>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="pic_content">PIC Content</label>
+                                    <input type="text" 
+                                           class="form-control @error('pic_content') is-invalid @enderror" 
+                                           id="pic_content" 
+                                           name="pic_content" 
+                                           value="{{ old('pic_content') }}"
+                                           placeholder="Person in charge of content">
+                                    @error('pic_content')
+                                        <span class="invalid-feedback">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="address">Address</label>
+                                    <textarea class="form-control @error('address') is-invalid @enderror" 
+                                              id="address" 
+                                              name="address" 
+                                              rows="3"
+                                              placeholder="Enter complete address">{{ old('address') }}</textarea>
+                                    @error('address')
+                                        <span class="invalid-feedback">{{ $message }}</span>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -416,9 +395,6 @@
                                 </a>
                             </div>
                             <div class="col-sm-6 text-right">
-                                <button type="button" class="btn btn-info" id="preview-btn">
-                                    <i class="fas fa-eye"></i> Preview
-                                </button>
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-save"></i> Create KOL
                                 </button>
@@ -429,29 +405,6 @@
             </div>
         </div>
     </form>
-
-    <!-- Preview Modal -->
-    <div class="modal fade" id="previewModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">KOL Preview</h5>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body" id="preview-content">
-                    <!-- Preview content will be populated here -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="$('#createKolForm').submit()">
-                        <i class="fas fa-save"></i> Confirm & Create
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 @stop
 
 @section('css')
@@ -465,15 +418,20 @@
         #cpm-preview {
             border-left: 4px solid #007bff;
         }
-        .btn-group-sm .btn {
-            margin-right: 5px;
-            margin-bottom: 5px;
-        }
         .form-group label {
             font-weight: 600;
         }
         .card-header {
             border-bottom: 1px solid rgba(0,0,0,.125);
+        }
+        .video-link {
+            font-size: 0.875rem;
+        }
+        .fetch-single-video {
+            min-width: 40px;
+        }
+        #video-stats {
+            margin-top: 15px;
         }
     </style>
 @stop
@@ -481,6 +439,8 @@
 @section('js')
 <script>
 $(document).ready(function() {
+    let videoData = {};
+    
     // CPM Calculation
     function calculateCPM() {
         const rate = parseFloat($('#rate').val()) || 0;
@@ -489,97 +449,145 @@ $(document).ready(function() {
         if (rate > 0 && avgView > 0) {
             const cpm = (rate / avgView) * 1000;
             const status = cpm < 25000 ? 'Worth it' : 'Gagal';
-            const statusClass = cmp < 25000 ? 'badge badge-success' : 'badge badge-danger';
+            const statusClass = cpm < 25000 ? 'badge badge-success' : 'badge badge-danger';
             
             $('#cpm-value').text(cpm.toLocaleString('id-ID', { maximumFractionDigits: 2 }));
             $('#cpm-status-badge').html(`<span class="${statusClass}">${status}</span>`);
-            $('#cmp-preview').show();
-            
-            // Auto-select status if not manually set
-            if (!$('#status_recommendation').val()) {
-                $('#status_recommendation').val(status);
-            }
+            $('#cpm-preview').show();
         } else {
-            $('#cmp-preview').hide();
+            $('#cpm-preview').hide();
         }
+    }
+
+    // Calculate average views from video data
+    function calculateAverageViews() {
+        const validVideos = Object.values(videoData).filter(data => data && data.views > 0);
+        
+        if (validVideos.length > 0) {
+            const totalViews = validVideos.reduce((sum, data) => sum + data.views, 0);
+            const averageViews = Math.round(totalViews / validVideos.length);
+            
+            $('#average_view').val(averageViews);
+            $('#total-videos').text(validVideos.length);
+            $('#total-views').text(totalViews.toLocaleString());
+            $('#calculated-average').text(averageViews.toLocaleString());
+            $('#video-stats').show();
+            
+            calculateCPM();
+        } else {
+            $('#average_view').val(0);
+            $('#video-stats').hide();
+        }
+    }
+
+    // Fetch single video data
+    function fetchSingleVideo(index) {
+        const videoLink = $(`#video_link_${index}`).val();
+        if (!videoLink) {
+            toastr.warning('Please enter video link first');
+            return;
+        }
+
+        const btn = $(`.fetch-single-video[data-index="${index}"]`);
+        const statusSpan = $(`.video-status-${index}`);
+        const viewsSpan = $(`.video-views-${index}`);
+        
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+        statusSpan.text('Fetching...').removeClass('text-muted text-success text-danger').addClass('text-info');
+
+        // Extract video ID from TikTok URL
+        const videoId = extractVideoId(videoLink);
+        if (!videoId) {
+            statusSpan.text('Invalid URL').removeClass('text-info').addClass('text-danger');
+            btn.prop('disabled', false).html('<i class="fas fa-download"></i>');
+            return;
+        }
+
+        // API call to fetch video data
+        $.get(`{{ url('admin/kol/fetch-video-data') }}/${videoId}`)
+            .done(function(response) {
+                if (response.success && response.data) {
+                    videoData[index] = {
+                        views: response.data.views,
+                        likes: response.data.likes,
+                        comments: response.data.comments
+                    };
+                    
+                    statusSpan.text('Success').removeClass('text-info').addClass('text-success');
+                    viewsSpan.text(`Views: ${response.data.views.toLocaleString()}`).show();
+                    
+                    calculateAverageViews();
+                } else {
+                    statusSpan.text('Failed to fetch').removeClass('text-info').addClass('text-danger');
+                }
+            })
+            .fail(function() {
+                statusSpan.text('Error occurred').removeClass('text-info').addClass('text-danger');
+            })
+            .always(function() {
+                btn.prop('disabled', false).html('<i class="fas fa-download"></i>');
+            });
+    }
+
+    // Extract video ID from TikTok URL
+    function extractVideoId(url) {
+        const patterns = [
+            /tiktok\.com\/@[^\/]+\/video\/(\d+)/,
+            /vm\.tiktok\.com\/([A-Za-z0-9]+)/,
+            /tiktok\.com\/t\/([A-Za-z0-9]+)/
+        ];
+        
+        for (let pattern of patterns) {
+            const match = url.match(pattern);
+            if (match) return match[1];
+        }
+        return null;
     }
 
     // Auto-calculate on input change
     $('#rate, #average_view').on('input', calculateCPM);
-    $('#calculate-cmp-btn').click(calculateCPM);
+    $('#calculate-cpm-btn').click(calculateCPM);
 
-    // Validate username
-    $('#validate-username-btn').click(function() {
-        const username = $('#username').val();
-        if (!username) {
-            toastr.warning('Please enter username first');
-            return;
-        }
-        
-        const btn = $(this);
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Validating...');
-        
-        // Simulate validation (replace with actual API call)
-        setTimeout(() => {
-            toastr.success('Username is available!');
-            btn.prop('disabled', false).html('<i class="fas fa-check"></i> Validate Username');
-        }, 1000);
+    // Fetch single video data
+    $('.fetch-single-video').click(function() {
+        const index = $(this).data('index');
+        fetchSingleVideo(index);
     });
 
-    // Fetch profile data
-    $('#fetch-profile-btn').click(function() {
-        const username = $('#username').val();
-        const channel = $('#channel').val();
-        
-        if (!username || !channel) {
-            toastr.warning('Please enter username and select channel first');
+    // Fetch all video data
+    $('#fetch-all-videos-btn').click(function() {
+        const btn = $(this);
+        const videoLinks = $('.video-link').filter(function() {
+            return $(this).val().trim() !== '';
+        });
+
+        if (videoLinks.length === 0) {
+            toastr.warning('Please enter at least one video link');
             return;
         }
-        
-        const btn = $(this);
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Fetching...');
-        
-        $.get(`{{ url('admin/kol/refresh-single') }}/${username}`)
-            .done(function(response) {
-                toastr.success('Profile data fetched successfully');
-                // You can populate fields with fetched data here
-                if (response.followers) {
-                    toastr.info(`Followers: ${response.followers.toLocaleString()}`);
-                }
-            })
-            .fail(function() {
-                toastr.error('Failed to fetch profile data');
-            })
-            .always(function() {
-                btn.prop('disabled', false).html('<i class="fas fa-download"></i> Fetch Profile Data');
-            });
-    });
 
-    // Preview functionality
-    $('#preview-btn').click(function() {
-        const formData = $('#createKolForm').serializeArray();
-        let previewHtml = '<div class="row">';
-        
-        // Basic Info
-        previewHtml += '<div class="col-md-6"><h6>Basic Information</h6><table class="table table-sm">';
-        previewHtml += `<tr><td><strong>Username:</strong></td><td>@${$('#username').val() || '-'}</td></tr>`;
-        previewHtml += `<tr><td><strong>Name:</strong></td><td>${$('#name').val() || '-'}</td></tr>`;
-        previewHtml += `<tr><td><strong>Channel:</strong></td><td>${$('#channel option:selected').text() || '-'}</td></tr>`;
-        previewHtml += `<tr><td><strong>Niche:</strong></td><td>${$('#niche option:selected').text() || '-'}</td></tr>`;
-        previewHtml += '</table></div>';
-        
-        // Financial Info
-        previewHtml += '<div class="col-md-6"><h6>Financial Information</h6><table class="table table-sm">';
-        previewHtml += `<tr><td><strong>Rate:</strong></td><td>Rp ${$('#rate').val() ? parseInt($('#rate').val()).toLocaleString() : '0'}</td></tr>`;
-        previewHtml += `<tr><td><strong>Average Views:</strong></td><td>${$('#average_view').val() ? parseInt($('#average_view').val()).toLocaleString() : '0'}</td></tr>`;
-        previewHtml += `<tr><td><strong>CPM:</strong></td><td>${$('#cmp-value').text() || 'Not calculated'}</td></tr>`;
-        previewHtml += `<tr><td><strong>Status:</strong></td><td>${$('#status_recommendation').val() || 'Auto-calculated'}</td></tr>`;
-        previewHtml += '</table></div>';
-        
-        previewHtml += '</div>';
-        
-        $('#preview-content').html(previewHtml);
-        $('#previewModal').modal('show');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Fetching All...');
+        $('#fetch-status').removeClass('badge-info badge-success badge-danger').addClass('badge-warning').text('Fetching...');
+
+        let completed = 0;
+        const total = videoLinks.length;
+
+        videoLinks.each(function() {
+            const index = $(this).data('index');
+            const videoLink = $(this).val();
+            
+            if (videoLink) {
+                setTimeout(() => {
+                    fetchSingleVideo(index);
+                    completed++;
+                    
+                    if (completed === total) {
+                        btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Fetch All Video Data');
+                        $('#fetch-status').removeClass('badge-warning').addClass('badge-success').text('Completed');
+                    }
+                }, index * 500); // Stagger requests to avoid rate limiting
+            }
+        });
     });
 
     // Form submission with loading state

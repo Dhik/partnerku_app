@@ -185,7 +185,21 @@
                     {data: 'like', className: "text-right"},
                     {data: 'comment', className: "text-right"},
                     {data: 'view', className: "text-right"},
-                    {data: 'cpm', className: "text-right"},
+                    {
+                        data: 'cpm', 
+                        className: "text-right",
+                        render: function(data, type, row) {
+                            // For sorting and type detection, return plain numeric value
+                            if (type === 'sort' || type === 'type') {
+                                // Extract numeric value from formatted string
+                                return parseFloat(data.replace(/<[^>]*>/g, '').replace(/[,.]/g, function(match) {
+                                    return match === ',' ? '.' : '';
+                                }));
+                            }
+                            // For display, return the HTML with label
+                            return data;
+                        }
+                    },
                     {data: 'engagement_rate', className: "text-right"},
                     {data: 'kol_followers', className: "text-right"},
                     {data: 'tiering', className: "text-center", orderable: false},
@@ -403,8 +417,12 @@
                     url: url,
                     method: 'GET',
                     success: function(response) {
+                        console.log("Response from server:", response);
+                        
+                        // Update card elements
                         $('#totalExpense').text(response.total_expense || '0');
                         $('#totalCPM').text(response.cpm || '0');
+                        $('#cpmBenchmark').text(response.cpm_benchmark || '0'); // Add CPM benchmark
                         $('#totalInfluencer').text(response.total_influencer || '0');
                         $('#totalContent').text(response.total_content || '0');
                         $('#totalAchievement').text(response.achievement || '0');
@@ -412,9 +430,24 @@
                         $('#totalLikes').text(response.like || '0');
                         $('#totalComment').text(response.comment || '0');
                         $('#engagementRate').text(response.engagement_rate || '0%');
+
+                        // Update tables if the functions exist
+                        if (typeof updateTable === 'function') {
+                            updateTable('top-likes-table', response.top_likes, 'like');
+                            updateTable('top-comments-table', response.top_comment, 'comment');
+                            updateTable('top-views-table', response.top_view, 'view');
+                            updateTable('top-engagements-table', response.top_engagement, 'engagement');
+                        }
+
+                        if (typeof updateTableProduct === 'function') {
+                            updateTableProduct(response.top_product);
+                        }
                     },
                     error: function(xhr, status, error) {
                         console.error('Error fetching card data:', error);
+                        
+                        // Optional: Show user-friendly error message
+                        $('#errorMessage').text('Failed to load statistics. Please try again.').show();
                     }
                 });
             }

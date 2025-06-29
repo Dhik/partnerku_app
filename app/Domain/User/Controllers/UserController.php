@@ -150,8 +150,6 @@ class UserController extends Controller
      */
     public function update(User $user, UserUpdateRequest $request): RedirectResponse
     {
-        $this->authorize(PermissionEnum::UpdateUser, [User::class, $user]);
-
         $this->userBLL->updateUser($user, $request);
 
         return redirect()

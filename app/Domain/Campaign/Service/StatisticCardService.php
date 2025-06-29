@@ -13,6 +13,9 @@ class StatisticCardService
 {
     public function card(int $campaignId, Request $request): array
     {
+        // Get the campaign to access cpm_benchmark
+        $campaign = Campaign::withoutGlobalScopes()->find($campaignId);
+        
         $allCampaignContents = CampaignContent::where('campaign_id', $campaignId)->get();
         $startDate = null;
         $endDate = null;
@@ -77,6 +80,7 @@ class StatisticCardService
             'cpm' => $totalView > 0 
                 ? ($allCampaignContents->sum('rate_card') / $totalView) * 1000 
                 : 0,
+            'cpmBenchmark' => $campaign ? $campaign->cpm_benchmark : 0, // Add cpm_benchmark
         ];
 
         $campaignContents = $this->fetchCampaignContents($campaignId, $request);
@@ -218,6 +222,7 @@ class StatisticCardService
             'total_expense' => number_format($totals['totalExpense'], 0, ',', '.'),
             'achievement' => $totals['totalExpense'] === 0 ? 0 : number_format($totals['totalView'] / $totals['totalExpense'] * 100, 2, ',', '.') . '%',
             'cpm' => number_format($totals['cpm'], 2, ',', '.'),
+            'cpm_benchmark' => number_format($totals['cpmBenchmark'], 0, ',', '.'), // Add formatted cmp_benchmark
             'engagement_rate' => $totals['totalView'] === 0 ? 0 : number_format(($totals['totalLike']+$totals['totalComment']) / $totals['totalView'] * 100, 2, ',', '.') . '%',
             'top_likes' => $topData['like'],
             'top_comment' => $topData['comment'],
