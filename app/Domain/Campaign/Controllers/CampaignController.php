@@ -20,6 +20,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Yajra\DataTables\DataTables;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Utilities\Request;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -203,7 +204,17 @@ class CampaignController extends Controller
             ->distinct()
             ->pluck('username');
 
-        return view('admin.campaign.show', compact('campaign', 'platforms', 'usernames'));
+        // Get Key Opinion Leaders with "Worth It" recommendation for current tenant
+        // Only get username and name for display purposes
+        $worthyKols = DB::table('key_opinion_leaders')
+            ->where('tenant_id', Auth::user()->current_tenant_id)
+            ->where('status_recommendation', 'Worth it')
+            ->whereNotNull('username')
+            ->where('username', '!=', '')
+            ->orderBy('username')
+            ->get(['username', 'name', 'channel']);
+
+        return view('admin.campaign.show', compact('campaign', 'platforms', 'usernames', 'worthyKols'));
     }
 
     /**

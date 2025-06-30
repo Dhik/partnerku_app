@@ -15,7 +15,23 @@
                     @csrf
                     <div class="form-group">
                         <label for="username">{{ trans('labels.influencer') }}<span class="required">*</span></label>
-                        <input type="text" class="form-control" id="username" name="username" required>
+                        <select class="form-control" id="username" name="username" required>
+                            <option value="">{{ trans('placeholder.select', ['field' => trans('labels.influencer')]) }}</option>
+                            @foreach($worthyKols ?? [] as $kol)
+                                <option value="{{ $kol->username }}">
+                                    {{ $kol->username }}
+                                    @if($kol->name)
+                                        ({{ $kol->name }})
+                                    @endif
+                                    @if($kol->channel)
+                                        - {{ ucfirst(str_replace('_', ' ', $kol->channel)) }}
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="form-text text-muted">
+                            Only showing KOLs with "Worth It" recommendation status
+                        </small>
                     </div>
 
                     <div class="form-group">
@@ -57,10 +73,13 @@
                         <label for="adsCode">{{ trans('labels.kode_ads') }}</label>
                         <input type="text" class="form-control" id="adsCode" name="kode_ads">
                     </div>
+
+                    <div class="form-group d-none" id="errorContent"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                     <button type="submit" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                         <i class="fas fa-save"></i> {{ trans('buttons.save') }}
                     </button>
                 </div>

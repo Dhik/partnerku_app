@@ -296,6 +296,159 @@ class KeyOpinionLeaderController extends Controller
         return view('admin.kol.index', $this->getCommonData());
     }
 
+    
+    /**
+     * Show Worth It KOLs
+     */
+    public function worthItIndex(): View|\Illuminate\Foundation\Application|Factory|Application
+    {
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
+        return view('admin.kol.worth-it', $this->getCommonData());
+    }
+
+    /**
+     * Get Worth It KOLs data for DataTable
+     */
+    public function getWorthItKols(Request $request): JsonResponse
+    {
+        $this->authorize('viewKOL', KeyOpinionLeader::class);
+
+        $user = Auth::user();
+        $query = KeyOpinionLeader::with(['picContact', 'createdBy'])
+            ->select('key_opinion_leaders.*')
+            ->where('tenant_id', $user->current_tenant_id);
+
+        // Apply search filters
+        if ($request->filled('channel')) {
+            $query->where('channel', $request->input('channel'));
+        }
+
+        if ($request->filled('niche')) {
+            $query->where('niche', $request->input('niche'));
+        }
+
+        if ($request->filled('content_type')) {
+            $query->where('content_type', $request->input('content_type'));
+        }
+
+        if ($request->filled('pic_contact')) {
+            $query->where('pic_contact', $request->input('pic_contact'));
+        }
+
+        if ($request->filled('followersMin')) {
+            $query->where('followers', '>=', (int) $request->input('followersMin'));
+        }
+
+        if ($request->filled('followersMax')) {
+            $query->where('followers', '<=', (int) $request->input('followersMax'));
+        }
+
+        // Filter only KOLs with calculated "Worth it" status
+        $allKols = $query->get();
+        $worthItKols = $allKols->filter(function ($kol) {
+            $cpmData = $this->calculateCpmAndStatus($kol);
+            return $cpmData['status_recommendation'] === 'Worth it';
+        });
+
+        return DataTables::of($worthItKols)
+            ->addColumn('pic_contact_name', function ($row) {
+                return $row->picContact->name ?? 'empty';
+            })
+            ->addColumn('actions', function ($row) {
+                $user = Auth::user();
+                $actions = '';
+                
+                // WhatsApp button
+                if (!empty($row->phone_number)) {
+                    $phoneNumber = preg_replace('/[^0-9]/', '', $row->phone_number);
+                    if (substr($phoneNumber, 0, 1) === '0') {
+                        $phoneNumber = '62' . substr($phoneNumber, 1);
+                    }
+                    $waLink = 'https://wa.me/' . $phoneNumber;
+                    
+                    $actions .= '<a href="' . $waLink . '" class="btn btn-success btn-xs" target="_blank" title="WhatsApp">
+                                    <i class="fab fa-whatsapp"></i>
+                                </a> ';
+                }
+                
+                // View button - all roles can view
+                $actions .= '<a href="' . route('kol.show', $row->id) . '" class="btn btn-info btn-xs" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a> ';
+                
+                // Edit button - Admin, Client1, TimAds can edit (TimInternal cannot edit)
+                if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('updateKOL', KeyOpinionLeader::class)) {
+                    $actions .= '<button onclick="openEditModal(' . $row->id . ')" class="btn btn-primary btn-xs" title="Edit">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button> ';
+                }
+                
+                // Delete button - Admin, Client1, TimAds only (TimInternal cannot delete)
+                if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('deleteKOL', KeyOpinionLeader::class)) {
+                    $actions .= '<button onclick="deleteKol(' . $row->id . ')" class="btn btn-danger btn-xs" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>';
+                }
+                
+                return $actions;
+            })
+            ->addColumn('refresh_follower', function ($row) {
+                return '<button class="btn btn-info btn-xs refresh-follower" data-id="' . $row->username . '">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>';
+            })
+            ->addColumn('engagement_rate_display', function ($row) {
+                return $row->engagement_rate ? number_format($row->engagement_rate, 2) . '%' : '-';
+            })
+            ->addColumn('cpm_display', function ($row) {
+                $cpmData = $this->calculateCpmAndStatus($row);
+                return number_format($cpmData['cpm'], 0, ',', '.');
+            })
+            ->addColumn('status_recommendation_display', function ($row) {
+                $cpmData = $this->calculateCpmAndStatus($row);
+                return '<span class="badge badge-success">Worth it</span>';
+            })
+            ->addColumn('tier_display', function ($row) {
+                $followers = $row->followers ?: 0;
+                
+                if ($followers >= 1000 && $followers < 10000) {
+                    $tier = 'Nano';
+                    $badgeClass = 'badge-info';
+                } elseif ($followers >= 10000 && $followers < 50000) {
+                    $tier = 'Micro';
+                    $badgeClass = 'badge-purple';
+                } elseif ($followers >= 50000 && $followers < 250000) {
+                    $tier = 'Mid-Tier';
+                    $badgeClass = 'badge-warning';
+                } elseif ($followers >= 250000 && $followers < 1000000) {
+                    $tier = 'Macro';
+                    $badgeClass = 'badge-success';
+                } elseif ($followers >= 1000000) {
+                    $tier = 'Mega';
+                    $badgeClass = 'badge-danger';
+                } else {
+                    $tier = 'Unknown';
+                    $badgeClass = 'badge-secondary';
+                }
+                
+                return '<span class="badge ' . $badgeClass . '">' . $tier . '</span>';
+            })
+            ->editColumn('rate', function ($row) {
+                return number_format($row->rate, 0, ',', '.');
+            })
+            ->editColumn('followers', function ($row) {
+                return number_format($row->followers, 0, ',', '.');
+            })
+            ->rawColumns([
+                'actions', 
+                'refresh_follower', 
+                'cpm_display',
+                'status_recommendation_display',
+                'tier_display'
+            ])
+            ->toJson();
+    }
+
     /**
      * Create a new KOL
      */

@@ -82,6 +82,8 @@ Route::prefix('admin')
             ->group(function () {
                 Route::get('/', [KeyOpinionLeaderController::class, 'index'])->name('kol.index');
                 Route::get('/get', [KeyOpinionLeaderController::class, 'get'])->name('kol.get');
+                Route::get('/worth-it', [KeyOpinionLeaderController::class, 'worthItIndex'])->name('kol.worthIt.index');
+                Route::get('/worth-it/get', [KeyOpinionLeaderController::class, 'getWorthItKols'])->name('kol.worthIt.get');
                 Route::get('/campaign-history/{username}', [KeyOpinionLeaderController::class, 'getCampaignHistory'])->name('kol.campaignHistory');
                 Route::get('/kpi', [KeyOpinionLeaderController::class, 'getKpiData'])->name('kol.kpi');
                 Route::get('/select', [KeyOpinionLeaderController::class, 'select'])->name('kol.select');

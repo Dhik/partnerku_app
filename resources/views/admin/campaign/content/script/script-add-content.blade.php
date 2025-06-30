@@ -1,4 +1,17 @@
+// script-add-content.blade.php
 <script>
+// Auto-fill form fields when KOL is selected (simplified)
+$('#username').on('change', function() {
+    const selectedUsername = $(this).val();
+    
+    if (selectedUsername) {
+        console.log('Selected KOL username:', selectedUsername);
+        // You can add any simple auto-fill logic here if needed
+        // For example, clearing rate card to force manual entry:
+        // $('#rateCard').val('');
+    }
+});
+
 // Submit content form
 $('#contentForm').submit(function(e) {
     e.preventDefault();
@@ -44,5 +57,25 @@ $('#contentForm').submit(function(e) {
             saveButton.prop('disabled', false);
         }
     });
+});
+
+// Reset form when modal is closed
+$('#contentModal').on('hidden.bs.modal', function() {
+    $('#contentForm')[0].reset();
+    $('#errorContent').addClass('d-none').empty();
+    $('#username').val('').trigger('change');
+    $('#platform').val('').trigger('change');
+});
+
+// Initialize Select2 for better dropdown experience (optional)
+$(document).ready(function() {
+    if (typeof $.fn.select2 !== 'undefined') {
+        $('#username').select2({
+            placeholder: 'Search and select an influencer...',
+            allowClear: true,
+            dropdownParent: $('#contentModal'),
+            width: '100%'
+        });
+    }
 });
 </script>
