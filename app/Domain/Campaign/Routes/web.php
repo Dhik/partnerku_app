@@ -86,6 +86,7 @@ Route::prefix('admin')
                 Route::get('/worth-it/get', [KeyOpinionLeaderController::class, 'getWorthItKols'])->name('kol.worthIt.get');
                 Route::get('/campaign-history/{username}', [KeyOpinionLeaderController::class, 'getCampaignHistory'])->name('kol.campaignHistory');
                 Route::get('/kpi', [KeyOpinionLeaderController::class, 'getKpiData'])->name('kol.kpi');
+                Route::get('/fetch-video-stats', [KeyOpinionLeaderController::class, 'fetchVideoStatistics'])->name('kol.fetch.video.stats');
                 Route::get('/select', [KeyOpinionLeaderController::class, 'select'])->name('kol.select');
                 Route::get('/chart', [KeyOpinionLeaderController::class, 'chart'])->name('kol.chart');
                 Route::get('/average-rate', [KeyOpinionLeaderController::class, 'averageRate'])->name('kol.averageRate');

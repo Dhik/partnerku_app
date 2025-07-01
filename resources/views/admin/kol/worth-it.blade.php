@@ -158,7 +158,6 @@
                         <thead>
                             <tr>
                                 <th>Username</th>
-                                <th>Name</th>
                                 <th>Channel</th>
                                 <th>Niche</th>
                                 <th>Followers</th>
@@ -167,7 +166,6 @@
                                 <th>Status</th>
                                 <th>Tier</th>
                                 <th>PIC Contact</th>
-                                <th>Engagement Rate</th>
                                 <th>Refresh</th>
                                 <th>Actions</th>
                             </tr>
@@ -346,7 +344,6 @@ $(document).ready(function() {
         },
         columns: [
             { data: 'username', name: 'username' },
-            { data: 'name', name: 'name' },
             { data: 'channel', name: 'channel' },
             { data: 'niche', name: 'niche' },
             { data: 'followers', name: 'followers' },
@@ -355,7 +352,6 @@ $(document).ready(function() {
             { data: 'status_recommendation_display', name: 'status_recommendation', orderable: false },
             { data: 'tier_display', name: 'tier', orderable: false },
             { data: 'pic_contact_name', name: 'pic_contact_name' },
-            { data: 'engagement_rate_display', name: 'engagement_rate' },
             { data: 'refresh_follower', name: 'refresh_follower', orderable: false, searchable: false },
             { data: 'actions', name: 'actions', orderable: false, searchable: false }
         ],

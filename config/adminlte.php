@@ -361,13 +361,13 @@ return [
                     ],
                     'active' => ['admin/kol', 'admin/kol/create*', 'admin/kol/edit*', 'admin/kol/show*', 'admin/kol/get*']
                 ],
-                [
-                    'text' => 'Worth It KOLs',
-                    'url' => 'admin/kol/worth-it',
-                    'icon' => 'nav-icon far fa-circle',
-                    'can' => [PermissionEnum::ViewKOL],
-                    'active' => ['admin/kol/worth-it*']
-                ],
+                // [
+                //     'text' => 'Worth It KOLs',
+                //     'url' => 'admin/kol/worth-it',
+                //     'icon' => 'nav-icon far fa-circle',
+                //     'can' => [PermissionEnum::ViewKOL],
+                //     'active' => ['admin/kol/worth-it*']
+                // ],
             ]
         ],
         

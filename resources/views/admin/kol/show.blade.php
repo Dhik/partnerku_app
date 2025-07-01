@@ -17,7 +17,6 @@
 @stop
 
 @section('content')
-    <!-- KOL Profile Header -->
     <div class="row">
         <div class="col-12">
             <div class="card card-primary card-outline">
@@ -25,7 +24,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="card-title">
                             <i class="fas fa-user-circle"></i> 
-                            @{{ $keyOpinionLeader->username }}
+                            {{ '@' . $keyOpinionLeader->username }}
                             @if($keyOpinionLeader->name)
                                 <small class="text-muted">({{ $keyOpinionLeader->name }})</small>
                             @endif
@@ -76,7 +75,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-lg-2 col-6">
+        <!-- <div class="col-lg-2 col-6">
             <div class="small-box bg-success">
                 <div class="inner">
                     <h3>{{ $keyOpinionLeader->engagement_rate ? number_format($keyOpinionLeader->engagement_rate, 2) . '%' : '-' }}</h3>
@@ -86,11 +85,11 @@
                     <i class="fas fa-heart"></i>
                 </div>
             </div>
-        </div>
+        </div> -->
         <div class="col-lg-2 col-6">
             <div class="small-box bg-warning">
                 <div class="inner">
-                    <h3>{{ number_format($cmpData['cpm']) }}</h3>
+                    <h3>{{ number_format($keyOpinionLeader->cpm ?: 0) }}</h3>
                     <p>CPM</p>
                 </div>
                 <div class="icon">
@@ -99,13 +98,13 @@
             </div>
         </div>
         <div class="col-lg-2 col-6">
-            <div class="small-box {{ $cmpData['status_recommendation'] === 'Worth it' ? 'bg-success' : 'bg-danger' }}">
+            <div class="small-box {{ $keyOpinionLeader->status_recommendation === 'Worth it' ? 'bg-success' : 'bg-danger' }}">
                 <div class="inner">
-                    <h3 style="font-size: 1.5rem;">{{ $cmpData['status_recommendation'] ?: 'Unknown' }}</h3>
+                    <h3 style="font-size: 1.5rem;">{{ $keyOpinionLeader->status_recommendation ?: 'Unknown' }}</h3>
                     <p>Status</p>
                 </div>
                 <div class="icon">
-                    <i class="fas {{ $cmpData['status_recommendation'] === 'Worth it' ? 'fa-thumbs-up' : 'fa-thumbs-down' }}"></i>
+                    <i class="fas {{ $keyOpinionLeader->status_recommendation === 'Worth it' ? 'fa-thumbs-up' : 'fa-thumbs-down' }}"></i>
                 </div>
             </div>
         </div>
@@ -123,7 +122,7 @@
         <div class="col-lg-2 col-6">
             <div class="small-box bg-dark">
                 <div class="inner">
-                    <h3>{{ number_format($keyOpinionLeader->rate ?: 0) }}</h3>
+                    <h3>{{ number_format($keyOpinionLeader->price_per_slot ?: 0) }}</h3>
                     <p>Rate</p>
                 </div>
                 <div class="icon">
@@ -147,7 +146,7 @@
                     <table class="table table-sm">
                         <tr>
                             <td><strong>Username:</strong></td>
-                            <td>@{{ $keyOpinionLeader->username }}</td>
+                            <td>{{ '@' . $keyOpinionLeader->username }}</td>
                         </tr>
                         <tr>
                             <td><strong>Name:</strong></td>
@@ -222,8 +221,8 @@
                         <tr>
                             <td><strong>CPM:</strong></td>
                             <td>
-                                <span class="badge {{ $cmpData['status_recommendation'] === 'Worth it' ? 'badge-success' : 'badge-danger' }}">
-                                    {{ number_format($cmpData['cpm']) }}
+                                <span class="badge {{ $cpmData['status_recommendation'] === 'Worth it' ? 'badge-success' : 'badge-danger' }}">
+                                    {{ number_format($cpmData['cpm']) }}
                                 </span>
                             </td>
                         </tr>
@@ -322,7 +321,7 @@
     </div>
 
     <!-- Performance Targets vs Actual -->
-    @if($tiering !== 'Unknown' && isset($er_top) && isset($er_bottom) && isset($cmp_target))
+    @if($tiering !== 'Unknown' && isset($er_top) && isset($er_bottom) && isset($cpm_target))
     <div class="row">
         <div class="col-md-12">
             <div class="card">
@@ -353,17 +352,17 @@
                             <h6>CPM Performance</h6>
                             <div class="progress mb-3" style="height: 25px;">
                                 @php
-                                    $cmpActualPercent = $cmp_target > 0 ? min((($cmp_target - $cmpData['cmp']) / $cmp_target) * 100, 100) : 0;
-                                    $cmpActualPercent = max($cmpActualPercent, 0);
-                                    $cmpStatus = $cmpData['cmp'] <= $cmp_target ? 'bg-success' : 'bg-danger';
+                                    $cpmActualPercent = $cpm_target > 0 ? min((($cpm_target - $cpmData['cpm']) / $cpm_target) * 100, 100) : 0;
+                                    $cpmActualPercent = max($cpmActualPercent, 0);
+                                    $cpmStatus = $cpmData['cpm'] <= $cpm_target ? 'bg-success' : 'bg-danger';
                                 @endphp
-                                <div class="progress-bar {{ $cmpStatus }}" 
-                                     style="width: {{ $cmpActualPercent }}%">
-                                    {{ number_format($cmpData['cmp']) }}
+                                <div class="progress-bar {{ $cpmStatus }}" 
+                                     style="width: {{ $cpmActualPercent }}%">
+                                    {{ number_format($cpmData['cpm']) }}
                                 </div>
                             </div>
                             <small class="text-muted">
-                                Target: ≤ {{ number_format($cmp_target) }}
+                                Target: ≤ {{ number_format($cpm_target) }}
                             </small>
                         </div>
                     </div>
@@ -371,13 +370,13 @@
                     <!-- Performance Summary -->
                     <div class="row mt-3">
                         <div class="col-md-12">
-                            <div class="alert {{ $cmpData['status_recommendation'] === 'Worth it' ? 'alert-success' : 'alert-danger' }}">
+                            <div class="alert {{ $cpmData['status_recommendation'] === 'Worth it' ? 'alert-success' : 'alert-danger' }}">
                                 <h5>
-                                    <i class="fas {{ $cmpData['status_recommendation'] === 'Worth it' ? 'fa-check-circle' : 'fa-exclamation-triangle' }}"></i> 
-                                    Overall Performance: {{ $cmpData['status_recommendation'] ?: 'Unknown' }}
+                                    <i class="fas {{ $cpmData['status_recommendation'] === 'Worth it' ? 'fa-check-circle' : 'fa-exclamation-triangle' }}"></i> 
+                                    Overall Performance: {{ $cpmData['status_recommendation'] ?: 'Unknown' }}
                                 </h5>
                                 <p class="mb-0">
-                                    @if($cmpData['status_recommendation'] === 'Worth it')
+                                    @if($cpmData['status_recommendation'] === 'Worth it')
                                         This KOL meets the performance criteria with good CPM and engagement metrics.
                                     @else
                                         This KOL needs performance improvement. Consider renegotiating rates or improving content strategy.
@@ -534,7 +533,7 @@ $(document).ready(function() {
                                 <td>${likes.toLocaleString()}</td>
                                 <td>${comments.toLocaleString()}</td>
                                 <td>${engagementRate}%</td>
-                                <td>${item.cmp ? parseFloat(item.cmp).toLocaleString() : '0'}</td>
+                                <td>${item.cpm ? parseFloat(item.cpm).toLocaleString() : '0'}</td>
                             </tr>
                         `;
                     });
@@ -554,281 +553,6 @@ $(document).ready(function() {
 
     // Tooltip initialization
     $('[data-toggle="tooltip"]').tooltip();
-});
-</script>
-@stop
-                                    {{ ucfirst(str_replace('_', ' ', $keyOpinionLeader->channel)) }}
-                                </span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>Niche:</strong></td>
-                            <td>{{ $keyOpinionLeader->niche ?: '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Content Type:</strong></td>
-                            <td>{{ $keyOpinionLeader->content_type ?: '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Phone Number:</strong></td>
-                            <td>{{ $keyOpinionLeader->phone_number ?: '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Address:</strong></td>
-                            <td>{{ $keyOpinionLeader->address ?: '-' }}</td>
-                        </tr>
-                        @if($keyOpinionLeader->link)
-                        <tr>
-                            <td><strong>Profile Link:</strong></td>
-                            <td>
-                                <a href="{{ $keyOpinionLeader->link }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-external-link-alt"></i> View Profile
-                                </a>
-                            </td>
-                        </tr>
-                        @endif
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Performance & Financial -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-chart-line"></i> Performance & Financial
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm">
-                        <tr>
-                            <td><strong>Rate per Content:</strong></td>
-                            <td>Rp {{ number_format($keyOpinionLeader->rate ?: 0) }}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Average Views:</strong></td>
-                            <td>{{ number_format($keyOpinionLeader->average_view ?: 0) }}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>CPM:</strong></td>
-                            <td>
-                                <span class="badge {{ $cmpData['status_recommendation'] === 'Worth it' ? 'badge-success' : 'badge-danger' }}">
-                                    {{ number_format($cmpData['cmp']) }}
-                                </span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><strong>Price per Slot:</strong></td>
-                            <td>Rp {{ number_format($keyOpinionLeader->price_per_slot ?: 0) }}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>GMV:</strong></td>
-                            <td>Rp {{ number_format($keyOpinionLeader->gmv ?: 0) }}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Category:</strong></td>
-                            <td>{{ $keyOpinionLeader->category ?: '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Tier:</strong></td>
-                            <td>
-                                <span class="badge badge-info">{{ $tiering }}</span>
-                                @if($tiering !== 'Unknown')
-                                    <small class="text-muted">
-                                        ({{ number_format($keyOpinionLeader->followers) }} followers)
-                                    </small>
-                                @endif
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Management Information -->
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-users-cog"></i> Management Information
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <table class="table table-sm">
-                                <tr>
-                                    <td><strong>PIC Contact:</strong></td>
-                                    <td>{{ $keyOpinionLeader->picContact->name ?? '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>PIC Listing:</strong></td>
-                                    <td>{{ $keyOpinionLeader->pic_listing ?: '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>PIC Content:</strong></td>
-                                    <td>{{ $keyOpinionLeader->pic_content ?: '-' }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-4">
-                            <table class="table table-sm">
-                                <tr>
-                                    <td><strong>Created By:</strong></td>
-                                    <td>{{ $keyOpinionLeader->createdBy->name ?? '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Created At:</strong></td>
-                                    <td>{{ $keyOpinionLeader->created_at ? $keyOpinionLeader->created_at->format('d M Y H:i') : '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Last Updated:</strong></td>
-                                    <td>{{ $keyOpinionLeader->updated_at ? $keyOpinionLeader->updated_at->format('d M Y H:i') : '-' }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-4">
-                            <table class="table table-sm">
-                                <tr>
-                                    <td><strong>Following:</strong></td>
-                                    <td>{{ number_format($keyOpinionLeader->following ?: 0) }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Total Likes:</strong></td>
-                                    <td>{{ number_format($keyOpinionLeader->total_likes ?: 0) }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Video Count:</strong></td>
-                                    <td>{{ number_format($keyOpinionLeader->video_count ?: 0) }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Performance Targets vs Actual -->
-    @if($tiering !== 'Unknown')
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-bullseye"></i> Performance Targets vs Actual
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Engagement Rate</h6>
-                            <div class="progress mb-3">
-                                @php
-                                    $erActualPercent = $er_actual > 0 ? min(($er_actual / ($er_top * 100)) * 100, 100) : 0;
-                                @endphp
-                                <div class="progress-bar {{ $er_actual >= ($er_bottom * 100) ? 'bg-success' : 'bg-danger' }}" 
-                                     style="width: {{ $erActualPercent }}%">
-                                    {{ number_format($er_actual, 2) }}%
-                                </div>
-                            </div>
-                            <small class="text-muted">
-                                Target: {{ number_format($er_bottom * 100, 1) }}% - {{ number_format($er_top * 100, 1) }}%
-                            </small>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>CPM Performance</h6>
-                            <div class="progress mb-3">
-                                @php
-                                    $cmpActualPercent = $cmp_target > 0 ? min((($cmp_target - $cmpData['cmp']) / $cmp_target) * 100, 100) : 0;
-                                    $cmpActualPercent = max($cmpActualPercent, 0);
-                                @endphp
-                                <div class="progress-bar {{ $cmpData['cmp'] <= $cmp_target ? 'bg-success' : 'bg-danger' }}" 
-                                     style="width: {{ $cmpActualPercent }}%">
-                                    {{ number_format($cmpData['cmp']) }}
-                                </div>
-                            </div>
-                            <small class="text-muted">
-                                Target: ≤ {{ number_format($cmp_target) }}
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- Include Edit Modal -->
-    @include('admin.kol.modals.edit-modal')
-@stop
-
-@section('css')
-    <style>
-        .small-box h3 {
-            font-size: 2rem;
-        }
-        .progress {
-            height: 25px;
-        }
-        .progress-bar {
-            line-height: 25px;
-            font-weight: bold;
-        }
-        .table td {
-            border-top: none;
-        }
-    </style>
-@stop
-
-@section('js')
-<script>
-$(document).ready(function() {
-    // Refresh data functionality
-    $('.refresh-data').click(function() {
-        const username = $(this).data('username');
-        const btn = $(this);
-        
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Refreshing...');
-        
-        $.get(`{{ url('admin/kol/refresh-single') }}/${username}`)
-            .done(function(response) {
-                toastr.success('Data refreshed successfully');
-                // Reload the page to show updated data
-                setTimeout(() => {
-                    location.reload();
-                }, 1000);
-            })
-            .fail(function(xhr) {
-                const response = xhr.responseJSON;
-                toastr.error(response?.message || 'Failed to refresh data');
-            })
-            .always(function() {
-                btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Refresh Data');
-            });
-    });
-
-    // Open edit modal function
-    window.openEditModal = function(kolId) {
-        @can('updateKOL', App\Domain\Campaign\Models\KeyOpinionLeader::class)
-        $.get(`{{ url('admin/kol') }}/${kolId}/edit-data`)
-            .done(function(data) {
-                // Use the global function from edit modal
-                if (typeof populateEditForm === 'function') {
-                    populateEditForm(data);
-                }
-                $('#editKolModal').modal('show');
-            })
-            .fail(function() {
-                toastr.error('Failed to load KOL data');
-            });
-        @else
-        toastr.error('You do not have permission to edit KOLs');
-        @endcan
-    };
 });
 </script>
 @stop

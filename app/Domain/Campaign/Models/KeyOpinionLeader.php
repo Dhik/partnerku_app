@@ -35,6 +35,7 @@ class KeyOpinionLeader extends Model
         'pic_content',
         'status_recommendation',
         'tenant_id',
+        'video_10_links',
     ];
 
     protected $casts = [
@@ -43,6 +44,7 @@ class KeyOpinionLeader extends Model
         'cpm' => 'integer',
         'price_per_slot' => 'integer',
         'gmv' => 'integer',
+        'video_10_links' => 'array',
     ];
 
     protected $appends = [

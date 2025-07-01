@@ -136,25 +136,26 @@
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
-                                    <label>Min Followers</label>
-                                    <input type="number" name="followersMin" id="filter-followers-min" class="form-control" placeholder="Min followers">
+                                    <label>Status Recommendation</label>
+                                    <select name="status_recommendation" id="filter-status-recommendation" class="form-control">
+                                        <option value="">All Status</option>
+                                        <option value="Worth it">Worth it</option>
+                                        <option value="Gagal">Gagal</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="form-group">
-                                    <label>Max Followers</label>
-                                    <input type="number" name="followersMax" id="filter-followers-max" class="form-control" placeholder="Max followers">
+                                    <label>&nbsp;</label>
+                                    <div class="d-flex">
+                                        <button type="button" class="btn btn-primary mr-2" id="apply-filters">
+                                            <i class="fas fa-filter"></i> Apply
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" id="reset-filters">
+                                            <i class="fas fa-undo"></i> Reset
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12">
-                                <button type="button" class="btn btn-primary" id="apply-filters">
-                                    <i class="fas fa-filter"></i> Apply Filters
-                                </button>
-                                <button type="button" class="btn btn-secondary" id="reset-filters">
-                                    <i class="fas fa-undo"></i> Reset
-                                </button>
                             </div>
                         </div>
                     </form>
@@ -175,16 +176,13 @@
                         <thead>
                             <tr>
                                 <th>Username</th>
-                                <th>Name</th>
                                 <th>Channel</th>
                                 <th>Niche</th>
-                                <th>Followers</th>
-                                <th>Rate</th>
+                                <th>Price/Slot</th>
+                                <th>Avg View</th>
                                 <th>CPM</th>
                                 <th>Status</th>
-                                <th>Tier</th>
                                 <th>PIC Contact</th>
-                                <th>Engagement Rate</th>
                                 <th>Refresh</th>
                                 <th>Actions</th>
                             </tr>
@@ -331,6 +329,8 @@
 
 @section('css')
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap4.min.css">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
         .small-box h3 {
             font-size: 2.2rem;
@@ -338,12 +338,49 @@
         .badge {
             font-size: 0.8em;
         }
+        
+        /* SweetAlert2 custom styles */
+        .swal2-popup {
+            font-size: 0.875rem;
+        }
+        
+        .swal2-html-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .swal2-html-container h6 {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: #495057;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 0.25rem;
+        }
+        
+        .swal2-html-container h6:first-child {
+            margin-top: 0;
+        }
+        
+        .swal2-html-container .list-unstyled li {
+            padding: 0.125rem 0;
+        }
+        
+        .swal2-html-container .badge {
+            font-size: 0.75rem;
+        }
+        
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
     </style>
 @stop
 
 @section('js')
 <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
 <script>
 $(document).ready(function() {
     // Initialize DataTable
@@ -357,22 +394,18 @@ $(document).ready(function() {
                 d.niche = $('#filter-niche').val();
                 d.content_type = $('#filter-content-type').val();
                 d.pic_contact = $('#filter-pic').val();
-                d.followersMin = $('#filter-followers-min').val();
-                d.followersMax = $('#filter-followers-max').val();
+                d.status_recommendation = $('#filter-status-recommendation').val();
             }
         },
         columns: [
             { data: 'username', name: 'username' },
-            { data: 'name', name: 'name' },
             { data: 'channel', name: 'channel' },
             { data: 'niche', name: 'niche' },
-            { data: 'followers', name: 'followers' },
-            { data: 'rate', name: 'rate' },
+            { data: 'price_per_slot', name: 'price_per_slot' },
+            { data: 'average_view', name: 'average_view' },
             { data: 'cpm_display', name: 'cpm', orderable: false },
             { data: 'status_recommendation_display', name: 'status_recommendation', orderable: false },
-            { data: 'tier_display', name: 'tier', orderable: false },
             { data: 'pic_contact_name', name: 'pic_contact_name' },
-            { data: 'engagement_rate_display', name: 'engagement_rate' },
             { data: 'refresh_follower', name: 'refresh_follower', orderable: false, searchable: false },
             { data: 'actions', name: 'actions', orderable: false, searchable: false }
         ],
@@ -388,8 +421,7 @@ $(document).ready(function() {
             niche: $('#filter-niche').val(),
             content_type: $('#filter-content-type').val(),
             pic_contact: $('#filter-pic').val(),
-            followersMin: $('#filter-followers-min').val(),
-            followersMax: $('#filter-followers-max').val()
+            status_recommendation: $('#filter-status-recommendation').val()
         };
 
         $.get('{{ route("kol.kpi") }}', filterData, function(data) {
@@ -413,24 +445,148 @@ $(document).ready(function() {
         loadKpiData();
     });
 
-    // Refresh follower data
+    // Refresh video statistics (UPDATED FUNCTION)
     $(document).on('click', '.refresh-follower', function() {
         const username = $(this).data('id');
         const btn = $(this);
         
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
-        
-        $.get(`{{ url('admin/kol/refresh-single') }}/${username}`)
-            .done(function(response) {
-                toastr.success('Follower data refreshed successfully');
-                kolTable.ajax.reload(null, false);
-            })
-            .fail(function(xhr) {
-                toastr.error('Failed to refresh follower data');
-            })
-            .always(function() {
-                btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i>');
-            });
+        // Show SweetAlert confirmation
+        Swal.fire({
+            title: 'Fetch Video Statistics?',
+            text: `This will fetch TikTok video data for @${username} and update average views, CPM, and status.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, fetch data!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading alert
+                Swal.fire({
+                    title: 'Fetching Video Statistics...',
+                    html: `
+                        <div class="text-center">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                            <p>Processing video links for <strong>@${username}</strong></p>
+                            <p class="text-muted">This may take a few moments...</p>
+                        </div>
+                    `,
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                });
+
+                // Disable the button
+                btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+                
+                // Make API call to fetch video statistics
+                $.get('{{ route("kol.fetch.video.stats") }}', {
+                    username: username,
+                    tenant_id: {{ Auth::user()->current_tenant_id }}
+                })
+                .done(function(response) {
+                    if (response.success) {
+                        // Show success result with details
+                        const stats = response.statistics;
+                        const cpm = response.cpm_calculation; // Fixed: was 'cmp', now 'cpm'
+                        
+                        Swal.fire({
+                            title: 'Success!',
+                            html: `
+                                <div class="text-left">
+                                    <h6><i class="fas fa-user text-primary"></i> KOL Information:</h6>
+                                    <ul class="list-unstyled mb-3">
+                                        <li><strong>Username:</strong> @${response.kol_info.username}</li>
+                                        <li><strong>Channel:</strong> ${response.kol_info.channel}</li>
+                                    </ul>
+                                    
+                                    <h6><i class="fas fa-chart-line text-success"></i> Statistics Updated:</h6>
+                                    <ul class="list-unstyled mb-3">
+                                        <li><strong>Videos Processed:</strong> ${stats.successful_videos}/${stats.total_video_links}</li>
+                                        <li><strong>Previous Avg Views:</strong> ${(stats.old_average_views || 0).toLocaleString()}</li>
+                                        <li><strong>New Avg Views:</strong> ${stats.new_average_views.toLocaleString()}</li>
+                                        ${stats.failed_videos > 0 ? `<li class="text-warning"><strong>Failed Videos:</strong> ${stats.failed_videos}</li>` : ''}
+                                    </ul>
+                                    
+                                    <h6><i class="fas fa-calculator text-info"></i> CPM Calculation:</h6>
+                                    <ul class="list-unstyled mb-3">
+                                        <li><strong>Price per Slot:</strong> Rp ${(cpm.price_per_slot || 0).toLocaleString()}</li>
+                                        <li><strong>New CPM:</strong> ${cpm.new_cpm ? 'Rp ' + cpm.new_cpm.toLocaleString() : 'N/A'}</li>
+                                        <li><strong>Status:</strong> 
+                                            <span class="badge badge-${cpm.new_status === 'Worth it' ? 'success' : 'danger'}">
+                                                ${cpm.new_status}
+                                            </span>
+                                        </li>
+                                    </ul>
+                                    
+                                    ${response.view_counts && response.view_counts.length > 0 ? `
+                                        <h6><i class="fas fa-eye text-warning"></i> Individual Video Views:</h6>
+                                        <div class="text-muted small">
+                                            ${response.view_counts.map(view => view.toLocaleString()).join(', ')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `,
+                            icon: 'success',
+                            confirmButtonText: 'Great!',
+                            confirmButtonColor: '#28a745'
+                        });
+                        
+                        // Reload table and KPI data
+                        kolTable.ajax.reload(null, false);
+                        loadKpiData();
+                        
+                    } else {
+                        // Show error message
+                        Swal.fire({
+                            title: 'Failed to Fetch Data',
+                            html: `
+                                <div class="text-left">
+                                    <p><strong>Error:</strong> ${response.message}</p>
+                                    ${response.kol_info ? `
+                                        <hr>
+                                        <h6>KOL Information:</h6>
+                                        <ul class="list-unstyled">
+                                            <li><strong>ID:</strong> ${response.kol_info.id}</li>
+                                            <li><strong>Username:</strong> @${response.kol_info.username}</li>
+                                            <li><strong>Current Avg Views:</strong> ${(response.kol_info.current_average_view || 0).toLocaleString()}</li>
+                                            <li><strong>Price per Slot:</strong> Rp ${(response.kol_info.price_per_slot || 0).toLocaleString()}</li>
+                                        </ul>
+                                    ` : ''}
+                                </div>
+                            `,
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                })
+                .fail(function(xhr) {
+                    const response = xhr.responseJSON;
+                    
+                    Swal.fire({
+                        title: 'Request Failed',
+                        html: `
+                            <div class="text-left">
+                                <p><strong>Status:</strong> ${xhr.status}</p>
+                                <p><strong>Error:</strong> ${response?.message || 'Unknown error occurred'}</p>
+                                <p class="text-muted">Please try again or contact support if the problem persists.</p>
+                            </div>
+                        `,
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#dc3545'
+                    });
+                })
+                .always(function() {
+                    // Re-enable the button
+                    btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i>');
+                });
+            }
+        });
     });
 
     // Open edit modal

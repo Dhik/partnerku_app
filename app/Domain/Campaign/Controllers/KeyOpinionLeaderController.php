@@ -86,12 +86,9 @@ class KeyOpinionLeaderController extends Controller
             $query->where('status_affiliate', $request->input('status_affiliate'));
         }
 
-        if ($request->filled('followersMin')) {
-            $query->where('followers', '>=', (int) $request->input('followersMin'));
-        }
-
-        if ($request->filled('followersMax')) {
-            $query->where('followers', '<=', (int) $request->input('followersMax'));
+        // Add status recommendation filter
+        if ($request->filled('status_recommendation')) {
+            $query->where('status_recommendation', $request->input('status_recommendation'));
         }
 
         return $query;
@@ -177,13 +174,14 @@ class KeyOpinionLeaderController extends Controller
                 return $row->engagement_rate ? number_format($row->engagement_rate, 2) . '%' : '-';
             })
             ->addColumn('cpm_display', function ($row) {
-                $cpmData = $this->calculateCpmAndStatus($row);
-                return number_format($cpmData['cpm'], 0, ',', '.');
+                return $row->cpm ? number_format($row->cpm, 0, ',', '.') : '-';
             })
             ->addColumn('status_recommendation_display', function ($row) {
-                $cpmData = $this->calculateCpmAndStatus($row);
-                $badgeClass = $cpmData['status_recommendation'] === 'Worth it' ? 'badge-success' : 'badge-danger';
-                return '<span class="badge ' . $badgeClass . '">' . $cpmData['status_recommendation'] . '</span>';
+                if (!$row->status_recommendation) {
+                    return '<span class="badge badge-secondary">-</span>';
+                }
+                $badgeClass = $row->status_recommendation === 'Worth it' ? 'badge-success' : 'badge-danger';
+                return '<span class="badge ' . $badgeClass . '">' . $row->status_recommendation . '</span>';
             })
             ->addColumn('tier_display', function ($row) {
                 $followers = $row->followers ?: 0;
@@ -239,12 +237,13 @@ class KeyOpinionLeaderController extends Controller
         $validCpmCount = 0;
         
         foreach ($filteredKols as $kol) {
-            $cpmData = $this->calculateCpmAndStatus($kol);
-            if ($cpmData['status_recommendation'] === 'Worth it') {
+            // Read directly from database fields instead of calculating
+            if ($kol->status_recommendation === 'Worth it') {
                 $worthItCount++;
             }
-            if ($cpmData['cpm'] > 0) {
-                $totalCpm += $cpmData['cpm'];
+            
+            if ($kol->cpm && $kol->cpm > 0) {
+                $totalCpm += $kol->cpm;
                 $validCpmCount++;
             }
         }
@@ -259,6 +258,178 @@ class KeyOpinionLeaderController extends Controller
             'avg_cpm' => round($avgCpm, 2),
             'total_followers' => $filteredKols->sum('followers')
         ]);
+    }
+
+    /**
+     * Fetch video statistics and update average views for a KOL (Test Route)
+     */
+    public function fetchVideoStatistics(Request $request): JsonResponse
+    {
+        try {   
+            $username = $request->get('username', 'Fanyfan093');
+            $tenantId = $request->get('tenant_id', 1);
+            
+            $kol = KeyOpinionLeader::where('username', $username)
+                                ->where('tenant_id', $tenantId)
+                                ->first();
+
+            if (!$kol) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "KOL not found with username: {$username} and tenant_id: {$tenantId}"
+                ], 404);
+            }
+
+            // Check if KOL has video links
+            if (empty($kol->video_10_links)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No video links found for this KOL',
+                    'kol_info' => [
+                        'id' => $kol->id,
+                        'username' => $kol->username,
+                        'current_average_view' => $kol->average_view,
+                        'price_per_slot' => $kol->price_per_slot
+                    ]
+                ], 400);
+            }
+
+            // Decode video links
+            $videoLinks = json_decode($kol->video_10_links, true);
+            
+            if (empty($videoLinks) || !is_array($videoLinks)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid video links data',
+                    'video_10_links' => $kol->video_10_links
+                ], 400);
+            }
+
+            $viewCounts = [];
+            $videoDetails = [];
+            $failedLinks = [];
+
+            // Process each video link
+            foreach ($videoLinks as $index => $link) {
+                if (empty(trim($link))) {
+                    continue;
+                }
+
+                try {
+                    // Initialize TikTok scrapper service
+                    $tiktokService = app(\App\Domain\Campaign\Service\TiktokScrapperService::class);
+                    
+                    // Fetch data from TikTok API
+                    $videoData = $tiktokService->getData($link);
+                    
+                    if ($videoData && isset($videoData['view'])) {
+                        $viewCounts[] = (int) $videoData['view'];
+                        $videoDetails[] = [
+                            'index' => $index + 1,
+                            'link' => $link,
+                            'views' => $videoData['view'],
+                            'likes' => $videoData['like'] ?? 0,
+                            'comments' => $videoData['comment'] ?? 0,
+                            'shares' => $videoData['share'] ?? 0,
+                        ];
+                    } else {
+                        $failedLinks[] = [
+                            'index' => $index + 1,
+                            'link' => $link,
+                            'reason' => 'No data returned from API'
+                        ];
+                    }
+                    
+                    // Add small delay to avoid rate limiting
+                    sleep(1);
+                    
+                } catch (\Exception $e) {
+                    $failedLinks[] = [
+                        'index' => $index + 1,
+                        'link' => $link,
+                        'reason' => $e->getMessage()
+                    ];
+                }
+            }
+
+            // Calculate results
+            $oldAverageViews = $kol->average_view;
+            $newAverageViews = !empty($viewCounts) ? round(array_sum($viewCounts) / count($viewCounts)) : 0;
+            
+            // Update KOL if we have valid data
+            $updated = false;
+            $newCpm = null;
+            $newStatus = null;
+            
+            if ($newAverageViews > 0) {
+                $kol->update(['average_view' => $newAverageViews]);
+                $updated = true;
+                
+                // Calculate CPM using price_per_slot
+                // Formula: cpm = (price_per_slot / average_view) * 1000
+                if ($kol->price_per_slot && $newAverageViews > 0) {
+                    $newCpm = round(($kol->price_per_slot / $newAverageViews) * 1000);
+                    
+                    // Set status_recommendation based on CPM
+                    // if cpm < 25000 then "Worth it" else "Gagal"
+                    $newStatus = $newCpm < 25000 ? 'Worth it' : 'Gagal';
+                    
+                    $kol->update([
+                        'cpm' => $newCpm,
+                        'status_recommendation' => $newStatus
+                    ]);
+                } else {
+                    // If price_per_slot is not set, CPM cannot be calculated
+                    $newCpm = 0;
+                    $newStatus = 'Cannot calculate (no price_per_slot)';
+                    
+                    $kol->update([
+                        'cpm' => $newCpm,
+                        'status_recommendation' => $newStatus
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $updated ? 'Video statistics updated successfully' : 'No valid video data found',
+                'kol_info' => [
+                    'id' => $kol->id,
+                    'username' => $kol->username,
+                    'tenant_id' => $kol->tenant_id,
+                    'channel' => $kol->channel
+                ],
+                'statistics' => [
+                    'total_video_links' => count($videoLinks),
+                    'successful_videos' => count($viewCounts),
+                    'failed_videos' => count($failedLinks),
+                    'old_average_views' => $oldAverageViews,
+                    'new_average_views' => $newAverageViews,
+                    'updated' => $updated
+                ],
+                'cpm_calculation' => [
+                    'price_per_slot' => $kol->price_per_slot,
+                    'new_average_views' => $newAverageViews,
+                    'formula' => 'cpm = (price_per_slot / average_view) * 1000',
+                    'calculation' => $kol->price_per_slot && $newAverageViews > 0 
+                        ? "({$kol->price_per_slot} / {$newAverageViews}) * 1000 = {$newCpm}"
+                        : 'Cannot calculate - missing price_per_slot or zero average_view',
+                    'new_cpm' => $newCpm,
+                    'new_status' => $newStatus,
+                    'status_rule' => 'Worth it if CPM < 25,000, else Gagal'
+                ],
+                'view_counts' => $viewCounts,
+                'video_details' => $videoDetails,
+                'failed_links' => $failedLinks
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+                'trace' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
+        }
     }
 
     /**
@@ -481,26 +652,70 @@ class KeyOpinionLeaderController extends Controller
             $data['created_by'] = Auth::id();
             $data['tenant_id'] = Auth::user()->current_tenant_id;
             
-            // Calculate CPM and status
-            $avgViews = $data['average_view'] ?? 0;
-            $rate = $data['rate'] ?? 0;
+            // Process video_10_links - filter out empty values
+            if (isset($data['video_10_links']) && is_array($data['video_10_links'])) {
+                $videoLinks = array_filter($data['video_10_links'], function($link) {
+                    return !empty(trim($link));
+                });
+                
+                // Re-index array to remove gaps and store as JSON
+                $data['video_10_links'] = json_encode(array_values($videoLinks));
+            } else {
+                $data['video_10_links'] = json_encode([]);
+            }
+            
+            // Calculate CPM and status - Fix data type conversion
+            $avgViews = isset($data['average_view']) ? (float) $data['average_view'] : 0;
+            $rate = isset($data['rate']) ? (float) $data['rate'] : 0;
+            
             $cpm = $avgViews > 0 ? ($rate / $avgViews) * 1000 : 0;
-            $data['cpm'] = round($cpm, 2);
+            $data['cpm'] = (int) round($cpm, 0); // Store as integer in database
             $data['status_recommendation'] = $cpm < 25000 ? 'Worth it' : 'Gagal';
 
+            // Ensure numeric fields are properly cast
+            $numericFields = ['rate', 'price_per_slot', 'gmv', 'average_view'];
+            foreach ($numericFields as $field) {
+                if (isset($data[$field])) {
+                    $data[$field] = $data[$field] !== '' ? (int) $data[$field] : null;
+                }
+            }
+
+            // Debug logging
+            Log::info('Creating KOL with data:', [
+                'username' => $data['username'] ?? 'not set',
+                'channel' => $data['channel'] ?? 'not set',
+                'average_view' => $data['average_view'] ?? 'not set',
+                'pic_contact' => $data['pic_contact'] ?? 'not set',
+                'video_links_count' => count(json_decode($data['video_10_links'], true)),
+            ]);
+
             $kol = KeyOpinionLeader::create($data);
+            
+            $videoLinksCount = count(json_decode($data['video_10_links'], true));
             
             return redirect()
                 ->route('kol.show', $kol->id)
                 ->with([
                     'alert' => 'success',
-                    'message' => trans('messages.success_save', ['model' => trans('labels.key_opinion_leader')]),
+                    'message' => trans('messages.success_save', ['model' => trans('labels.key_opinion_leader')]) . 
+                            ' (' . $videoLinksCount . ' video links saved)',
                 ]);
-        } catch (\Exception $e) {
-            Log::error('Error creating KOL: ' . $e->getMessage());
+                
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error creating KOL:', $e->errors());
             return redirect()->back()
                 ->withInput()
-                ->withErrors(['error' => 'Failed to create KOL.']);
+                ->withErrors($e->errors());
+                
+        } catch (\Exception $e) {
+            Log::error('Error creating KOL: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'input' => $request->all()
+            ]);
+            
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Failed to create KOL: ' . $e->getMessage()]);
         }
     }
 
