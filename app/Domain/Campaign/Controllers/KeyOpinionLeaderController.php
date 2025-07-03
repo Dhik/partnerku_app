@@ -266,8 +266,8 @@ class KeyOpinionLeaderController extends Controller
     public function fetchVideoStatistics(Request $request): JsonResponse
     {
         try {   
-            $username = $request->get('username', 'Fanyfan093');
-            $tenantId = $request->get('tenant_id', 1);
+            $username = $request->get('username');
+            $tenantId = $request->get('tenant_id');
             
             $kol = KeyOpinionLeader::where('username', $username)
                                 ->where('tenant_id', $tenantId)
