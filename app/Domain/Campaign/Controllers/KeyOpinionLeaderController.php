@@ -44,13 +44,13 @@ class KeyOpinionLeaderController extends Controller
         $skinTypes = KeyOpinionLeaderEnum::SkinType ?? ['normal', 'oily', 'dry', 'combination'];
         $skinConcerns = KeyOpinionLeaderEnum::SkinConcern ?? ['acne', 'aging', 'dullness', 'sensitivity'];
         $contentTypes = KeyOpinionLeaderEnum::ContentType ?? ['review', 'tutorial', 'unboxing', 'lifestyle'];
-        $marketingUsers = User::whereHas('roles', function($query) {
-            $query->whereIn('name', ['tim_internal', 'tim_ads', 'superadmin']);
-        })->get();
+        
+        // Filter users by current tenant ID
+        $marketingUsers = User::where('current_tenant_id', auth()->user()->current_tenant_id)
+            ->get();
 
         return compact('channels', 'niches', 'skinTypes', 'skinConcerns', 'contentTypes', 'marketingUsers');
     }
-
     /**
      * Get KOL datatable query
      */
@@ -693,12 +693,15 @@ class KeyOpinionLeaderController extends Controller
             
             $videoLinksCount = count(json_decode($data['video_10_links'], true));
             
+            // Auto refresh statistics and followers after successful creation
+            $this->refreshKolDataInBackground($kol->username, $kol->tenant_id);
+            
             return redirect()
                 ->route('kol.show', $kol->id)
                 ->with([
                     'alert' => 'success',
                     'message' => trans('messages.success_save', ['model' => trans('labels.key_opinion_leader')]) . 
-                            ' (' . $videoLinksCount . ' video links saved)',
+                            ' (' . $videoLinksCount . ' video links saved). Statistics and followers are being refreshed in the background.',
                 ]);
                 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -716,6 +719,50 @@ class KeyOpinionLeaderController extends Controller
             return redirect()->back()
                 ->withInput()
                 ->withErrors(['error' => 'Failed to create KOL: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Refresh KOL statistics and followers in background
+     */
+    private function refreshKolDataInBackground(string $username, int $tenantId): void
+    {
+        try {
+            // First refresh followers/following statistics
+            $followersResponse = $this->refreshFollowersFollowingSingle($username);
+            
+            Log::info('Auto refresh followers completed for KOL: ' . $username, [
+                'response' => $followersResponse->getData()
+            ]);
+            
+            // Then refresh video statistics if there are video links
+            $kol = KeyOpinionLeader::where('username', $username)
+                                ->where('tenant_id', $tenantId)
+                                ->first();
+                                
+            if ($kol && !empty($kol->video_10_links)) {
+                $videoLinks = json_decode($kol->video_10_links, true);
+                if (!empty($videoLinks) && is_array($videoLinks)) {
+                    // Create request with proper query parameters using Yajra Request
+                    $request = new \Yajra\DataTables\Utilities\Request();
+                    $request->merge([
+                        'username' => $username,
+                        'tenant_id' => $tenantId
+                    ]);
+                    
+                    $videoResponse = $this->fetchVideoStatistics($request);
+                    
+                    Log::info('Auto refresh video statistics completed for KOL: ' . $username, [
+                        'response' => $videoResponse->getData()
+                    ]);
+                }
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Error in background refresh for KOL: ' . $username, [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
         }
     }
 
@@ -1249,16 +1296,47 @@ class KeyOpinionLeaderController extends Controller
                 return response()->json(['error' => 'Unsupported channel type'], 400);
             }
             
+            // Add debugging logs
+            Log::info('Making API request for KOL: ' . $username, [
+                'url' => $url,
+                'channel' => $keyOpinionLeader->channel
+            ]);
+            
             $response = Http::withHeaders($headers)->get($url);
+            
+            // Log the raw API response
+            Log::info('API Response for KOL: ' . $username, [
+                'status' => $response->status(),
+                'headers' => $response->headers(),
+                'body' => $response->body(),
+                'json' => $response->json()
+            ]);
             
             if ($response->successful()) {
                 $data = $response->json();
+                
+                // Log the parsed data structure
+                Log::info('Parsed API data for KOL: ' . $username, [
+                    'data_structure' => $data,
+                    'has_user_key' => isset($data['user']),
+                    'has_data_key' => isset($data['data'])
+                ]);
                 
                 if ($keyOpinionLeader->channel === 'tiktok') {
                     $followers = $data['user']['follower_count'] ?? 0;
                     $following = $data['user']['following_count'] ?? 0;
                     $totalLikes = $data['user']['total_favorited'] ?? 0;
                     $videoCount = $data['user']['aweme_count'] ?? 0;
+                    
+                    // Log what we extracted
+                    Log::info('Extracted TikTok data for KOL: ' . $username, [
+                        'followers' => $followers,
+                        'following' => $following,
+                        'total_likes' => $totalLikes,
+                        'video_count' => $videoCount,
+                        'user_data_exists' => isset($data['user']),
+                        'available_keys' => isset($data['user']) ? array_keys($data['user']) : []
+                    ]);
                     
                     // Calculate engagement rate (likes-based)
                     $engagementRate = null;
@@ -1272,6 +1350,16 @@ class KeyOpinionLeaderController extends Controller
                     $following = $data['data']['following_count'] ?? 0;
                     $totalLikes = $data['data']['total_likes'] ?? 0;
                     $videoCount = $data['data']['media_count'] ?? 0;
+                    
+                    // Log what we extracted
+                    Log::info('Extracted Instagram data for KOL: ' . $username, [
+                        'followers' => $followers,
+                        'following' => $following,
+                        'total_likes' => $totalLikes,
+                        'video_count' => $videoCount,
+                        'data_exists' => isset($data['data']),
+                        'available_keys' => isset($data['data']) ? array_keys($data['data']) : []
+                    ]);
                     
                     // Calculate engagement rate for Instagram
                     $engagementRate = null;
@@ -1299,6 +1387,13 @@ class KeyOpinionLeaderController extends Controller
                 $oldTotalLikes = $keyOpinionLeader->total_likes;
                 $oldVideoCount = $keyOpinionLeader->video_count;
                 $oldEngagementRate = $keyOpinionLeader->engagement_rate;
+
+                // Log the update data
+                Log::info('Updating KOL data for: ' . $username, [
+                    'update_data' => $updateData,
+                    'old_followers' => $oldFollowers,
+                    'new_followers' => $followers
+                ]);
 
                 // Recalculate CPM and status after updating
                 $avgViews = $keyOpinionLeader->average_view ?: 0;
@@ -1341,9 +1436,20 @@ class KeyOpinionLeaderController extends Controller
                         ],
                     ],
                     'message' => 'Follower and profile data updated successfully.',
+                    'debug_info' => [
+                        'api_url' => $url,
+                        'api_status' => $response->status(),
+                        'raw_response_size' => strlen($response->body())
+                    ]
                 ]);
                 
             } else {
+                Log::error('API request failed for KOL: ' . $username, [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'url' => $url
+                ]);
+                
                 return response()->json([
                     'success' => false,
                     'error' => 'Failed to fetch data from API',

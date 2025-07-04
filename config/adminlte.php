@@ -402,19 +402,19 @@ return [
         ],
 
         // Results & Reports (SuperAdmin and monitoring roles)
-        [
-            'text' => 'Reports',
-            'icon' => 'fas fa-fw fa-chart-bar',
-            'can' => [PermissionEnum::ViewResult],
-            'submenu' => [
-                [
-                    'text' => 'Campaign Results',
-                    'url' => 'admin/result',
-                    'icon' => 'nav-icon far fa-circle',
-                    'can' => [PermissionEnum::ViewResult],
-                ],
-            ],
-        ],
+        // [
+        //     'text' => 'Reports',
+        //     'icon' => 'fas fa-fw fa-chart-bar',
+        //     'can' => [PermissionEnum::ViewResult],
+        //     'submenu' => [
+        //         [
+        //             'text' => 'Campaign Results',
+        //             'url' => 'admin/result',
+        //             'icon' => 'nav-icon far fa-circle',
+        //             'can' => [PermissionEnum::ViewResult],
+        //         ],
+        //     ],
+        // ],
         
         // Account Settings (All users)
         [

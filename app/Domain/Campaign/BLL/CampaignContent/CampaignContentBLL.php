@@ -110,11 +110,11 @@ class CampaignContentBLL implements CampaignContentBLLInterface
      */
     public function storeCampaignContent(int $campaignId, CampaignContentRequest $request): CampaignContent
     {
-        // Fetch data from the request
-        $data = $request->only(['username', 'channel', 'rate_card', 'task_name', 'link', 'product', 'boost_code', 'kode_ads']);
+        // Fetch data from the request (removed 'rate_card' from the request)
+        $data = $request->only(['username', 'channel', 'task_name', 'link', 'product', 'boost_code', 'kode_ads']);
         
         $user = Auth::user();
-
+        
         // Check if the KOL exists with tenant filtering
         $existingKOLQuery = KeyOpinionLeader::where('username', $data['username']);
         
@@ -124,38 +124,19 @@ class CampaignContentBLL implements CampaignContentBLLInterface
         }
         
         $existingKOL = $existingKOLQuery->first();
-
-        if ($existingKOL) {
-            // If the record exists, update it without modifying average_view and cpm
-            $existingKOL->update([
-                'channel' => $data['channel'],
-                'rate' => $data['rate_card'],
-                'created_by' => $user->id,
-                'pic_contact' => $user->id,
-            ]);
-            $kol = $existingKOL;
-        } else {
-            // If the record does not exist, create a new one with average_view and cpm set to 0
-            $kol = KeyOpinionLeader::create([
-                'username' => $data['username'],
-                'channel' => $data['channel'],
-                'niche' => '-',
-                'average_view' => 0,
-                'content_type' => '-',
-                'rate' => $data['rate_card'],
-                'cpm' => 0,
-                'status_recommendation' => 'Worth it', // Default status
-                'created_by' => $user->id,
-                'pic_contact' => $user->id,
-                'tenant_id' => $user->current_tenant_id, // Set tenant_id
-            ]);
+        
+        if (!$existingKOL) {
+            throw new \Exception('Selected influencer not found or not accessible.');
         }
-
-        // Prepare data for campaign content
+        
+        // Use the existing KOL (no need to update or create new KOL since we're just linking)
+        $kol = $existingKOL;
+        
+        // Prepare data for campaign content using KOL's rate as rate_card
         $campaignContentData = [
-            'key_opinion_leader_id' => $kol->id,  // Use the $kol instance for ID
+            'key_opinion_leader_id' => $kol->id,
             'username' => $data['username'],
-            'rate_card' => $data['rate_card'],
+            'rate_card' => $kol->rate, // Use the rate from Key Opinion Leader
             'task_name' => $data['task_name'],
             'link' => $data['link'],
             'product' => $data['product'],
@@ -164,9 +145,9 @@ class CampaignContentBLL implements CampaignContentBLLInterface
             'kode_ads' => $data['kode_ads'],
             'created_by' => $user->id,
             'campaign_id' => $campaignId,
-            'tenant_id' => $user->current_tenant_id, // Add tenant_id if CampaignContent also uses tenancy
+            'tenant_id' => $user->current_tenant_id,
         ];
-
+        
         // Store the campaign content
         return $this->campaignContentDAL->storeCampaignContent($campaignContentData);
     }

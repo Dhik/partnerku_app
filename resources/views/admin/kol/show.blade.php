@@ -17,7 +17,7 @@
 @stop
 
 @section('content')
-    <div class="row">
+    <!-- <div class="row">
         <div class="col-12">
             <div class="card card-primary card-outline">
                 <div class="card-header">
@@ -60,7 +60,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- KPI Cards -->
     <div class="row">
@@ -181,10 +181,10 @@
                                 @endif
                             </td>
                         </tr>
-                        <tr>
+                        <!-- <tr>
                             <td><strong>Address:</strong></td>
                             <td>{{ $keyOpinionLeader->address ?: '-' }}</td>
-                        </tr>
+                        </tr> -->
                         @if($keyOpinionLeader->link)
                         <tr>
                             <td><strong>Profile Link:</strong></td>
@@ -234,10 +234,10 @@
                             <td><strong>GMV:</strong></td>
                             <td>Rp {{ number_format($keyOpinionLeader->gmv ?: 0) }}</td>
                         </tr>
-                        <tr>
+                        <!-- <tr>
                             <td><strong>Category:</strong></td>
                             <td>{{ $keyOpinionLeader->category ?: '-' }}</td>
-                        </tr>
+                        </tr> -->
                         <tr>
                             <td><strong>Tier:</strong></td>
                             <td>

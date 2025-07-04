@@ -36,13 +36,15 @@
 
                     <div class="form-group">
                         <label for="taskName">{{ trans('labels.task') }}<span class="required">*</span></label>
-                        <input type="text" class="form-control" id="taskName" name="task_name" required>
+                        <select class="form-control" id="taskName" name="task_name" required>
+                            <option value="">{{ trans('placeholder.select', ['field' => trans('labels.task')]) }}</option>
+                            <option value="TOFU (Awareness)">TOFU (Awareness)</option>
+                            <option value="MOFU (Consider)">MOFU (Consider)</option>
+                            <option value="BOFU (Conversion)">BOFU (Conversion)</option>
+                        </select>
                     </div>
 
-                    <div class="form-group">
-                        <label for="rateCard">{{ trans('labels.rate_card') }}<span class="required">*</span></label>
-                        <input type="text" class="form-control" id="rateCard" name="rate_card" required>
-                    </div>
+
 
                     <div class="form-group">
                         <label for="platform">{{ trans('labels.platform') }}<span class="required">*</span></label>
@@ -61,7 +63,12 @@
 
                     <div class="form-group">
                         <label for="product">{{ trans('labels.product') }}<span class="required">*</span></label>
-                        <input type="text" class="form-control" id="product" name="product" required>
+                        <select class="form-control" id="product" name="product" required>
+                            <option value="">{{ trans('placeholder.select', ['field' => trans('labels.product')]) }}</option>
+                            @foreach($products ?? [] as $product)
+                                <option value="{{ $product->name }}">{{ $product->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="form-group">
@@ -111,13 +118,15 @@
 
                     <div class="form-group">
                         <label for="taskNameUpdate">{{ trans('labels.task') }}<span class="required">*</span></label>
-                        <input type="text" class="form-control" id="taskNameUpdate" name="task_name" required>
+                        <select class="form-control" id="taskNameUpdate" name="task_name" required>
+                            <option value="">{{ trans('placeholder.select', ['field' => trans('labels.task')]) }}</option>
+                            <option value="TOFU (Awareness)">TOFU (Awareness)</option>
+                            <option value="MOFU (Consider)">MOFU (Consider)</option>
+                            <option value="BOFU (Conversion)">BOFU (Conversion)</option>
+                        </select>
                     </div>
 
-                    <div class="form-group">
-                        <label for="rateCardUpdate">{{ trans('labels.rate_card') }}<span class="required">*</span></label>
-                        <input type="text" class="form-control" id="rateCardUpdate" name="rate_card" required>
-                    </div>
+
 
                     <div class="form-group">
                         <label for="platformUpdate">{{ trans('labels.platform') }}<span class="required">*</span></label>
@@ -135,7 +144,12 @@
 
                     <div class="form-group">
                         <label for="productUpdate">{{ trans('labels.product') }}<span class="required">*</span></label>
-                        <input type="text" class="form-control" id="productUpdate" name="product" required>
+                        <select class="form-control" id="productUpdate" name="product" required>
+                            <option value="">{{ trans('placeholder.select', ['field' => trans('labels.product')]) }}</option>
+                            @foreach($products ?? [] as $product)
+                                <option value="{{ $product->name }}">{{ $product->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="form-group">

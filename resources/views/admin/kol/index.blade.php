@@ -107,7 +107,7 @@
                                     <select name="niche" id="filter-niche" class="form-control">
                                         <option value="">All Niches</option>
                                         @foreach($niches as $niche)
-                                            <option value="{{ $niche }}">{{ ucfirst($niche) }}</option>
+                                            <option value="{{ $niche->name }}">{{ ucfirst($niche->name) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -269,7 +269,7 @@
                                             <select class="form-control" id="edit-niche" name="niche">
                                                 <option value="">Select Niche</option>
                                                 @foreach($niches as $niche)
-                                                    <option value="{{ $niche }}">{{ ucfirst($niche) }}</option>
+                                                    <option value="{{ $niche->name }}">{{ ucfirst($niche->name) }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
@@ -564,8 +564,28 @@ $(document).ready(function() {
             { data: 'channel', name: 'channel' },
             { data: 'niche', name: 'niche' },
             { data: 'followers', name: 'followers' },
-            { data: 'price_per_slot', name: 'price_per_slot' },
-            { data: 'average_view', name: 'average_view' },
+            { 
+                data: 'price_per_slot', 
+                name: 'price_per_slot',
+                render: function(data, type, row) {
+                    if (type === 'display' && data != null) {
+                        // Format number with thousand separators and add Rp. prefix
+                        return 'Rp. ' + new Intl.NumberFormat('id-ID').format(data);
+                    }
+                    return data;
+                }
+            },
+            { 
+                data: 'average_view', 
+                name: 'average_view',
+                render: function(data, type, row) {
+                    if (type === 'display' && data != null) {
+                        // Format number with thousand separators
+                        return new Intl.NumberFormat('id-ID').format(data);
+                    }
+                    return data;
+                }
+            },
             { data: 'cpm_display', name: 'cpm', orderable: false },
             { data: 'status_recommendation_display', name: 'status_recommendation', orderable: false },
             { data: 'pic_contact_name', name: 'pic_contact_name' },

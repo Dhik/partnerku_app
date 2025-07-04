@@ -305,14 +305,14 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="pic_contact">PIC Contact <span class="text-danger">*</span></label>
                                     <select class="form-control @error('pic_contact') is-invalid @enderror" 
                                             id="pic_contact" 
                                             name="pic_contact"
                                             required>
-                                        <option value="">Select PIC</option>
+                                        <option value="">Select PIC Contact</option>
                                         @if(isset($marketingUsers))
                                             @foreach($marketingUsers as $user)
                                                 <option value="{{ $user->id }}" 
@@ -328,31 +328,23 @@
                                 </div>
                             </div>
                             
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="pic_listing">PIC Listing</label>
-                                    <input type="text" 
-                                           class="form-control @error('pic_listing') is-invalid @enderror" 
-                                           id="pic_listing" 
-                                           name="pic_listing" 
-                                           value="{{ old('pic_listing') }}"
-                                           placeholder="Person in charge of listing">
+                                    <select class="form-control @error('pic_listing') is-invalid @enderror" 
+                                            id="pic_listing" 
+                                            name="pic_listing">
+                                        <option value="">Select PIC Listing</option>
+                                        @if(isset($marketingUsers))
+                                            @foreach($marketingUsers as $user)
+                                                <option value="{{ $user->id }}" 
+                                                        {{ old('pic_listing') == $user->id ? 'selected' : '' }}>
+                                                    {{ $user->name }}
+                                                </option>
+                                            @endforeach
+                                        @endif
+                                    </select>
                                     @error('pic_listing')
-                                        <span class="invalid-feedback">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="pic_content">PIC Content</label>
-                                    <input type="text" 
-                                           class="form-control @error('pic_content') is-invalid @enderror" 
-                                           id="pic_content" 
-                                           name="pic_content" 
-                                           value="{{ old('pic_content') }}"
-                                           placeholder="Person in charge of content">
-                                    @error('pic_content')
                                         <span class="invalid-feedback">{{ $message }}</span>
                                     @enderror
                                 </div>
@@ -418,6 +410,104 @@
             max-height: 200px;
             overflow-y: auto;
         }
+
+        /* Loading Overlay Styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 18px;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .loading-steps {
+            color: #ccc;
+            font-size: 14px;
+            text-align: center;
+            max-width: 300px;
+        }
+
+        .loading-step {
+            padding: 2px 0;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+        }
+
+        .loading-step.active {
+            opacity: 1;
+            color: #28a745;
+        }
+
+        .loading-step.completed {
+            opacity: 0.8;
+            color: #6c757d;
+        }
+
+        .loading-step i {
+            margin-right: 8px;
+            width: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .loading-step.active i {
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Form disabled state */
+        .form-disabled {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .btn-loading {
+            position: relative;
+            pointer-events: none;
+        }
+
+        .btn-loading .btn-text {
+            opacity: 0;
+        }
+
+        .btn-loading .btn-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
     </style>
 @stop
 
@@ -446,6 +536,64 @@ $(document).ready(function() {
     // Auto-calculate on input change
     $('#rate').on('input', calculateCPM);
     $('#calculate-cpm-btn').click(calculateCPM);
+
+    // Create loading overlay
+    function createLoadingOverlay() {
+        const overlay = $(`
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Creating KOL Profile...</div>
+                <div class="loading-steps">
+                    <div class="loading-step active" id="step1">
+                        <i class="fas fa-database"></i>Saving KOL data...
+                    </div>
+                    <div class="loading-step" id="step2">
+                        <i class="fas fa-users"></i>Refreshing follower statistics...
+                    </div>
+                    <div class="loading-step" id="step3">
+                        <i class="fas fa-video"></i>Processing video links...
+                    </div>
+                    <div class="loading-step" id="step4">
+                        <i class="fas fa-check-circle"></i>Finalizing setup...
+                    </div>
+                </div>
+            </div>
+        `);
+        $('body').append(overlay);
+    }
+
+    // Show loading animation with steps
+    function showLoading() {
+        $('#loadingOverlay').css('display', 'flex');
+        $('body').addClass('form-disabled');
+        
+        // Simulate loading steps
+        setTimeout(() => {
+            $('#step1').removeClass('active').addClass('completed');
+            $('#step2').addClass('active');
+        }, 1500);
+
+        setTimeout(() => {
+            $('#step2').removeClass('active').addClass('completed');
+            $('#step3').addClass('active');
+        }, 3000);
+
+        setTimeout(() => {
+            $('#step3').removeClass('active').addClass('completed');
+            $('#step4').addClass('active');
+        }, 5000);
+    }
+
+    // Hide loading animation
+    function hideLoading() {
+        $('#loadingOverlay').fadeOut(300, function() {
+            $(this).remove();
+        });
+        $('body').removeClass('form-disabled');
+    }
+
+    // Track if form is being submitted legitimately
+    let isFormSubmitting = false;
 
     // Form validation and submission
     $('#createKolForm').submit(function(e) {
@@ -476,16 +624,28 @@ $(document).ready(function() {
             return false;
         }
 
+        // Mark that we're legitimately submitting
+        isFormSubmitting = true;
+
+        // Update submit button first (before overlay to prevent interference)
+        const submitBtn = $('#submit-btn');
+        const originalHtml = submitBtn.html();
+        submitBtn.prop('disabled', true).html(`
+            <i class="fas fa-spinner fa-spin"></i> Creating KOL...
+        `);
+
+        // Show loading animation after a short delay
+        setTimeout(() => {
+            createLoadingOverlay();
+            showLoading();
+        }, 100);
+
         // Log form data for debugging
         const formData = new FormData(this);
         console.log('Form data being submitted:');
         for (let [key, value] of formData.entries()) {
             console.log(key + ': ' + value);
         }
-
-        // Show loading state
-        const submitBtn = $('#submit-btn');
-        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Creating...');
         
         // Count video links
         const videoLinks = $('.video-link').filter(function() {
@@ -494,6 +654,50 @@ $(document).ready(function() {
         
         if (videoLinks.length > 0) {
             console.log(`Saving ${videoLinks.length} video link(s)...`);
+            
+            // Update loading text for video processing
+            setTimeout(() => {
+                if ($('.loading-text').length) {
+                    $('.loading-text').text(`Processing ${videoLinks.length} video link(s)...`);
+                }
+            }, 3000);
+        }
+
+        // Safety timeout - but don't interfere with legitimate redirects
+        setTimeout(() => {
+            if ($('#loadingOverlay').is(':visible') && !isFormSubmitting) {
+                hideLoading();
+                submitBtn.prop('disabled', false).html(originalHtml);
+                console.warn('Form submission timeout - hiding loading animation');
+            }
+        }, 45000); // 45 second timeout
+
+        // Allow form to submit normally
+        return true;
+    });
+
+    // Handle page unload - but only warn if not legitimately submitting
+    $(window).on('beforeunload', function(e) {
+        // Don't show warning if we're in the middle of a legitimate form submission
+        if ($('#loadingOverlay').is(':visible') && !isFormSubmitting) {
+            e.preventDefault();
+            return 'KOL creation is in progress. Are you sure you want to leave?';
+        }
+        // If form is submitting, allow navigation without warning
+        return undefined;
+    });
+
+    // Hide loading when page loads (in case of redirect back)
+    $(window).on('load', function() {
+        hideLoading();
+        isFormSubmitting = false; // Reset the flag
+    });
+
+    // Also reset on page visibility change (when user comes back to tab)
+    $(document).on('visibilitychange', function() {
+        if (!document.hidden) {
+            hideLoading();
+            isFormSubmitting = false;
         }
     });
 
@@ -501,6 +705,23 @@ $(document).ready(function() {
     if ($('#rate').val()) {
         calculateCPM();
     }
+
+    // Add some visual feedback for form interactions during normal state
+    $('.form-control, .form-select').on('focus', function() {
+        $(this).closest('.form-group').addClass('focused');
+    }).on('blur', function() {
+        $(this).closest('.form-group').removeClass('focused');
+    });
+
+    // Video link counter
+    $('.video-link').on('input', function() {
+        const filledLinks = $('.video-link').filter(function() {
+            return $(this).val().trim() !== '';
+        }).length;
+        
+        // Update counter if you want to show it somewhere
+        console.log(`Video links filled: ${filledLinks}/10`);
+    });
 });
 </script>
 @stop

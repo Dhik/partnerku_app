@@ -204,8 +204,6 @@ class CampaignController extends Controller
             ->distinct()
             ->pluck('username');
 
-        // Get Key Opinion Leaders with "Worth It" recommendation for current tenant
-        // Only get username and name for display purposes
         $worthyKols = DB::table('key_opinion_leaders')
             ->where('tenant_id', Auth::user()->current_tenant_id)
             ->where('status_recommendation', 'Worth it')
@@ -214,7 +212,12 @@ class CampaignController extends Controller
             ->orderBy('username')
             ->get(['username', 'name', 'channel']);
 
-        return view('admin.campaign.show', compact('campaign', 'platforms', 'usernames', 'worthyKols'));
+        $products = DB::table('products')
+            ->where('tenant_id', Auth::user()->current_tenant_id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('admin.campaign.show', compact('campaign', 'platforms', 'usernames', 'worthyKols', 'products'));
     }
 
     /**
