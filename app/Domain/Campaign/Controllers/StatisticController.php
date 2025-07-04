@@ -61,40 +61,53 @@ class StatisticController extends Controller
     public function refresh(CampaignContent $campaignContent): JsonResponse
     {
         $this->authorize('updateCampaignContent', CampaignContent::class);
-        
-        if (empty($campaignContent->link)) {
+
+        try {
+            if (empty($campaignContent->link)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No link available for this content'
+                ], 400);
+            }
+
+            $result = $this->statisticBLL->scrapData(
+                $campaignContent->campaign_id,
+                $campaignContent->id,
+                $campaignContent->channel,
+                $campaignContent->link,
+                $campaignContent->tenant_id,
+                $campaignContent->rate_card
+            );
+
+            if (!$result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to refresh statistics'
+                ], 500);
+            }
+
+            // Update FYP status if views are above 10000
+            if ($result && isset($result['view']) && $result['view'] > 10000) {
+                $campaignContent->update(['is_fyp' => 1]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Statistics refreshed successfully',
+                'data' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error refreshing statistics: ' . $e->getMessage(), [
+                'content_id' => $campaignContent->id,
+                'link' => $campaignContent->link
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'No link available for this content'
-            ], 400);
-        }
-        
-        $result = $this->statisticBLL->scrapData(
-            $campaignContent->campaign_id,
-            $campaignContent->id,
-            $campaignContent->channel,
-            $campaignContent->link,
-            $campaignContent->tenant_id,
-            $campaignContent->rate_card
-        );
-        
-        if (!$result) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to refresh statistics'
+                'message' => 'Error refreshing statistics'
             ], 500);
         }
-        
-        // Update FYP status if views are above 10000
-        if ($result && isset($result['view']) && $result['view'] > 10000) {
-            $campaignContent->update(['is_fyp' => 1]);
-        }
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Statistics refreshed successfully',
-            'data' => $result
-        ]);
     }
 
     /**

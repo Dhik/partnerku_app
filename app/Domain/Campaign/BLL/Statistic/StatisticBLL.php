@@ -80,28 +80,56 @@ class StatisticBLL implements StatisticBLLInterface
         int $tenantId,
         int $rateCard
     ): Statistic|bool {
+        \Log::info('=== ScrapData Debug Start ===', [
+            'campaign_id' => $campaignId,
+            'content_id' => $campaignContentId,
+            'channel' => $channel,
+            'link' => $link,
+            'tenant_id' => $tenantId,
+            'rate_card' => $rateCard
+        ]);
+
         if (!empty($link)) {
             $data = [];
 
+            \Log::info('Link is not empty, proceeding with scraping', ['channel' => $channel]);
+
             if ($channel === CampaignContentEnum::InstagramFeed) {
+                \Log::info('Calling Instagram scraper');
                 $data = $this->instagramScrapperService->getPostInfo($link);
+                \Log::info('Instagram scraper result', ['data' => $data]);
             } elseif ($channel === CampaignContentEnum::TiktokVideo) {
+                \Log::info('Calling TikTok scraper');
                 $data = $this->tiktokScrapperService->getData($link);
+                \Log::info('TikTok scraper result', ['data' => $data]);
             } elseif ($channel === CampaignContentEnum::TwitterPost) {
                 $twitterPostId = $this->extractTwitterPostId($link);
+                \Log::info('Calling Twitter scraper', ['post_id' => $twitterPostId]);
                 $data = $this->twitterScrapperService->getData($twitterPostId);
+                \Log::info('Twitter scraper result', ['data' => $data]);
             } elseif ($channel === CampaignContentEnum::YoutubeVideo) {
                 $youtubeVideoId = $this->extractYoutubeVideoId($link);
+                \Log::info('Calling YouTube scraper', ['video_id' => $youtubeVideoId]);
                 $data = $this->youtubeScrapperService->getData($youtubeVideoId);
+                \Log::info('YouTube scraper result', ['data' => $data]);
             } elseif ($channel === CampaignContentEnum::ShopeeVideo) {
+                \Log::info('Calling Shopee scraper');
                 $data = $this->shopeeScrapperService->getData($link);
+                \Log::info('Shopee scraper result', ['data' => $data]);
+            } else {
+                \Log::warning('Unknown channel type', ['channel' => $channel]);
             }
 
+            \Log::info('Final scraper data', ['data' => $data, 'is_empty' => empty($data)]);
+
             if (empty($data)) {
+                \Log::warning('=== ScrapData returning false - empty data ===');
                 return false;
             }
 
-            return $this->store(
+            \Log::info('Data is not empty, calling store method');
+            
+            $result = $this->store(
                 $campaignId,
                 $campaignContentId,
                 Carbon::now(),
@@ -112,8 +140,12 @@ class StatisticBLL implements StatisticBLLInterface
                 $data['upload_date'],
                 $rateCard
             );
+
+            \Log::info('=== ScrapData successful ===', ['result_id' => $result->id]);
+            return $result;
         }
 
+        \Log::warning('=== ScrapData returning false - empty link ===');
         return false;
     }
     protected function extractTwitterPostId(string $url): ?string
