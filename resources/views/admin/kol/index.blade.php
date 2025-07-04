@@ -398,37 +398,31 @@
                                     </div>
                                     <div class="card-body">
                                         <div class="row">
-                                            <div class="col-md-4">
+                                            <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label for="edit-pic-contact">PIC Contact <span class="text-danger">*</span></label>
                                                     <select class="form-control" id="edit-pic-contact" name="pic_contact" required>
-                                                        <option value="">Select PIC</option>
-                                                        @foreach($marketingUsers as $user)
-                                                            <option value="{{ $user->id }}">{{ $user->name }}</option>
-                                                        @endforeach
+                                                        <option value="">Select PIC Contact</option>
+                                                        @if(isset($marketingUsers))
+                                                            @foreach($marketingUsers as $user)
+                                                                <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                                            @endforeach
+                                                        @endif
                                                     </select>
                                                 </div>
                                             </div>
                                             
-                                            <div class="col-md-4">
+                                            <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label for="edit-pic-listing">PIC Listing</label>
-                                                    <input type="text" 
-                                                           class="form-control" 
-                                                           id="edit-pic-listing" 
-                                                           name="pic_listing"
-                                                           placeholder="Person in charge of listing">
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="col-md-4">
-                                                <div class="form-group">
-                                                    <label for="edit-pic-content">PIC Content</label>
-                                                    <input type="text" 
-                                                           class="form-control" 
-                                                           id="edit-pic-content" 
-                                                           name="pic_content"
-                                                           placeholder="Person in charge of content">
+                                                    <select class="form-control" id="edit-pic-listing" name="pic_listing">
+                                                        <option value="">Select PIC Listing</option>
+                                                        @if(isset($marketingUsers))
+                                                            @foreach($marketingUsers as $user)
+                                                                <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                                            @endforeach
+                                                        @endif
+                                                    </select>
                                                 </div>
                                             </div>
                                         </div>
