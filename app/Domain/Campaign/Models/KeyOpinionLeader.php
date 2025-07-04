@@ -37,6 +37,8 @@ class KeyOpinionLeader extends Model
         'status_recommendation',
         'tenant_id',
         'video_10_links',
+        'following',
+        'followers',
     ];
 
     protected $casts = [

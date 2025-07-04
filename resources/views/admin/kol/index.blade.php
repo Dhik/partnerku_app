@@ -178,6 +178,7 @@
                                 <th>Username</th>
                                 <th>Channel</th>
                                 <th>Niche</th>
+                                <th>Followers</th>
                                 <th>Price/Slot</th>
                                 <th>Avg View</th>
                                 <th>CPM</th>
@@ -506,7 +507,7 @@
             box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
         }
 
-        #edit-cmp-preview {
+        #edit-cpm-preview {
             border-left: 4px solid #007bff;
         }
 
@@ -520,6 +521,19 @@
 
         .edit-video-link {
             font-size: 0.875rem;
+        }
+
+        .swal-wide {
+            width: 600px !important;
+        }
+        .swal2-html-container .form-check {
+            text-align: left;
+        }
+        .swal2-html-container .form-check-input {
+            margin-top: 0.125rem;
+        }
+        .swal2-html-container .form-check-label {
+            margin-left: 0.25rem;
         }
     </style>
 @stop
@@ -549,6 +563,7 @@ $(document).ready(function() {
             { data: 'username', name: 'username' },
             { data: 'channel', name: 'channel' },
             { data: 'niche', name: 'niche' },
+            { data: 'followers', name: 'followers' },
             { data: 'price_per_slot', name: 'price_per_slot' },
             { data: 'average_view', name: 'average_view' },
             { data: 'cpm_display', name: 'cpm', orderable: false },
@@ -602,13 +617,13 @@ $(document).ready(function() {
         if (rate > 0) {
             const cpm = (rate / avgView) * 1000;
             const status = cpm < 25000 ? 'Worth it' : 'Gagal';
-            const statusClass = cmp < 25000 ? 'badge badge-success' : 'badge badge-danger';
+            const statusClass = cpm < 25000 ? 'badge badge-success' : 'badge badge-danger';
             
             $('#edit-cpm-value').text('Rp ' + cpm.toLocaleString('id-ID', { maximumFractionDigits: 2 }));
             $('#edit-cpm-status-badge').html(`<span class="${statusClass}">${status}</span>`);
             $('#edit-cpm-preview').show();
         } else {
-            $('#edit-cmp-preview').hide();
+            $('#edit-cpm-preview').hide();
         }
     }
 
@@ -621,28 +636,61 @@ $(document).ready(function() {
         const username = $(this).data('id');
         const btn = $(this);
         
-        // Show SweetAlert confirmation
+        // Show SweetAlert with options
         Swal.fire({
-            title: 'Fetch Video Statistics?',
-            text: `This will fetch TikTok video data for @${username} and update average views, CPM, and status.`,
+            title: 'Refresh KOL Data',
+            html: `
+                <div class="text-left">
+                    <p>Choose what data to refresh for <strong>@${username}</strong>:</p>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="refresh-followers" checked>
+                        <label class="form-check-label" for="refresh-followers">
+                            <i class="fas fa-users text-primary"></i> Update Followers & Profile Stats
+                        </label>
+                        <small class="d-block text-muted">Fetches current follower count, following, likes, etc.</small>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="refresh-videos" checked>
+                        <label class="form-check-label" for="refresh-videos">
+                            <i class="fas fa-video text-success"></i> Update Video Statistics
+                        </label>
+                        <small class="d-block text-muted">Processes video links and calculates average views</small>
+                    </div>
+                </div>
+            `,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, fetch data!',
-            cancelButtonText: 'Cancel'
+            confirmButtonText: 'Start Refresh',
+            cancelButtonText: 'Cancel',
+            preConfirm: () => {
+                const refreshFollowers = document.getElementById('refresh-followers').checked;
+                const refreshVideos = document.getElementById('refresh-videos').checked;
+                
+                if (!refreshFollowers && !refreshVideos) {
+                    Swal.showValidationMessage('Please select at least one option to refresh');
+                    return false;
+                }
+                
+                return { refreshFollowers, refreshVideos };
+            }
         }).then((result) => {
             if (result.isConfirmed) {
+                const { refreshFollowers, refreshVideos } = result.value;
+                
                 // Show loading alert
                 Swal.fire({
-                    title: 'Fetching Video Statistics...',
+                    title: 'Refreshing KOL Data...',
                     html: `
                         <div class="text-center">
                             <div class="spinner-border text-primary mb-3" role="status">
                                 <span class="sr-only">Loading...</span>
                             </div>
-                            <p>Processing video links for <strong>@${username}</strong></p>
-                            <p class="text-muted">This may take a few moments...</p>
+                            <p>Processing data for <strong>@${username}</strong></p>
+                            <div id="refresh-progress">
+                                <p class="text-muted">Initializing...</p>
+                            </div>
                         </div>
                     `,
                     showConfirmButton: false,
@@ -653,112 +701,200 @@ $(document).ready(function() {
                 // Disable the button
                 btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
                 
-                // Make API call to fetch video statistics
-                $.get('{{ route("kol.fetch.video.stats") }}', {
-                    username: username,
-                    tenant_id: {{ Auth::user()->current_tenant_id }}
-                })
-                .done(function(response) {
-                    if (response.success) {
-                        // Show success result with details
-                        const stats = response.statistics;
-                        const cpm = response.cpm_calculation; // Fixed: was 'cmp', now 'cpm'
-                        
-                        Swal.fire({
-                            title: 'Success!',
-                            html: `
-                                <div class="text-left">
-                                    <h6><i class="fas fa-user text-primary"></i> KOL Information:</h6>
-                                    <ul class="list-unstyled mb-3">
-                                        <li><strong>Username:</strong> @${response.kol_info.username}</li>
-                                        <li><strong>Channel:</strong> ${response.kol_info.channel}</li>
-                                    </ul>
-                                    
-                                    <h6><i class="fas fa-chart-line text-success"></i> Statistics Updated:</h6>
-                                    <ul class="list-unstyled mb-3">
-                                        <li><strong>Videos Processed:</strong> ${stats.successful_videos}/${stats.total_video_links}</li>
-                                        <li><strong>Previous Avg Views:</strong> ${(stats.old_average_views || 0).toLocaleString()}</li>
-                                        <li><strong>New Avg Views:</strong> ${stats.new_average_views.toLocaleString()}</li>
-                                        ${stats.failed_videos > 0 ? `<li class="text-warning"><strong>Failed Videos:</strong> ${stats.failed_videos}</li>` : ''}
-                                    </ul>
-                                    
-                                    <h6><i class="fas fa-calculator text-info"></i> CPM Calculation:</h6>
-                                    <ul class="list-unstyled mb-3">
-                                        <li><strong>Price per Slot:</strong> Rp ${(cpm.price_per_slot || 0).toLocaleString()}</li>
-                                        <li><strong>New CPM:</strong> ${cpm.new_cpm ? 'Rp ' + cpm.new_cpm.toLocaleString() : 'N/A'}</li>
-                                        <li><strong>Status:</strong> 
-                                            <span class="badge badge-${cpm.new_status === 'Worth it' ? 'success' : 'danger'}">
-                                                ${cpm.new_status}
-                                            </span>
-                                        </li>
-                                    </ul>
-                                    
-                                    ${response.view_counts && response.view_counts.length > 0 ? `
-                                        <h6><i class="fas fa-eye text-warning"></i> Individual Video Views:</h6>
-                                        <div class="text-muted small">
-                                            ${response.view_counts.map(view => view.toLocaleString()).join(', ')}
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            `,
-                            icon: 'success',
-                            confirmButtonText: 'Great!',
-                            confirmButtonColor: '#28a745'
-                        });
-                        
-                        // Reload table and KPI data
-                        kolTable.ajax.reload(null, false);
-                        loadKpiData();
-                        
-                    } else {
-                        // Show error message
-                        Swal.fire({
-                            title: 'Failed to Fetch Data',
-                            html: `
-                                <div class="text-left">
-                                    <p><strong>Error:</strong> ${response.message}</p>
-                                    ${response.kol_info ? `
-                                        <hr>
-                                        <h6>KOL Information:</h6>
-                                        <ul class="list-unstyled">
-                                            <li><strong>ID:</strong> ${response.kol_info.id}</li>
-                                            <li><strong>Username:</strong> @${response.kol_info.username}</li>
-                                            <li><strong>Current Avg Views:</strong> ${(response.kol_info.current_average_view || 0).toLocaleString()}</li>
-                                            <li><strong>Price per Slot:</strong> Rp ${(response.kol_info.price_per_slot || 0).toLocaleString()}</li>
-                                        </ul>
-                                    ` : ''}
-                                </div>
-                            `,
-                            icon: 'error',
-                            confirmButtonText: 'OK',
-                            confirmButtonColor: '#dc3545'
-                        });
-                    }
-                })
-                .fail(function(xhr) {
-                    const response = xhr.responseJSON;
-                    
-                    Swal.fire({
-                        title: 'Request Failed',
-                        html: `
-                            <div class="text-left">
-                                <p><strong>Status:</strong> ${xhr.status}</p>
-                                <p><strong>Error:</strong> ${response?.message || 'Unknown error occurred'}</p>
-                                <p class="text-muted">Please try again or contact support if the problem persists.</p>
-                            </div>
-                        `,
-                        icon: 'error',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#dc3545'
-                    });
-                })
-                .always(function() {
-                    // Re-enable the button
-                    btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i>');
-                });
+                // Execute refresh operations
+                performRefreshOperations(username, refreshFollowers, refreshVideos, btn);
             }
         });
     });
+    function showRefreshResults(username, results, btn) {
+        const hasSuccess = (results.followers?.success || results.videos?.success);
+        const hasErrors = results.errors.length > 0;
+        
+        let html = '<div class="text-left">';
+        
+        // KOL Info Header
+        html += `
+            <h6><i class="fas fa-user text-primary"></i> KOL: @${username}</h6>
+            <hr>
+        `;
+        
+        // Followers Results
+        if (results.followers) {
+            if (results.followers.success) {
+                const data = results.followers.data;
+                html += `
+                    <h6><i class="fas fa-users text-success"></i> Followers & Profile Data Updated:</h6>
+                    <ul class="list-unstyled mb-3">
+                        <li><strong>Followers:</strong> ${(data.followers || 0).toLocaleString()}</li>
+                        <li><strong>Following:</strong> ${(data.following || 0).toLocaleString()}</li>
+                        <li><strong>Total Likes:</strong> ${(data.total_likes || 0).toLocaleString()}</li>
+                        <li><strong>Video/Post Count:</strong> ${(data.video_count || 0).toLocaleString()}</li>
+                        ${data.engagement_rate ? `<li><strong>Engagement Rate:</strong> ${data.engagement_rate}%</li>` : ''}
+                    </ul>
+                `;
+            } else {
+                html += `
+                    <h6><i class="fas fa-users text-danger"></i> Followers Update Failed:</h6>
+                    <p class="text-danger mb-3">${results.followers.error}</p>
+                `;
+            }
+        }
+        
+        // Video Results
+        if (results.videos) {
+            if (results.videos.success) {
+                const data = results.videos.data;
+                const stats = data.statistics;
+                const cpm = data.cpm_calculation || data.cpm_calculation; // Handle both possible typos
+                
+                html += `
+                    <h6><i class="fas fa-video text-success"></i> Video Statistics Updated:</h6>
+                    <ul class="list-unstyled mb-3">
+                        <li><strong>Videos Processed:</strong> ${stats.successful_videos}/${stats.total_video_links}</li>
+                        <li><strong>Previous Avg Views:</strong> ${(stats.old_average_views || 0).toLocaleString()}</li>
+                        <li><strong>New Avg Views:</strong> ${stats.new_average_views.toLocaleString()}</li>
+                        ${stats.failed_videos > 0 ? `<li class="text-warning"><strong>Failed Videos:</strong> ${stats.failed_videos}</li>` : ''}
+                    </ul>
+                    
+                    ${cpm ? `
+                        <h6><i class="fas fa-calculator text-info"></i> CPM Calculation:</h6>
+                        <ul class="list-unstyled mb-3">
+                            <li><strong>Price per Slot:</strong> Rp ${(cpm.price_per_slot || 0).toLocaleString()}</li>
+                            <li><strong>New CPM:</strong> ${cpm.new_cpm ? 'Rp ' + cpm.new_cpm.toLocaleString() : 'N/A'}</li>
+                            <li><strong>Status:</strong> 
+                                <span class="badge badge-${cpm.new_status === 'Worth it' ? 'success' : 'danger'}">
+                                    ${cpm.new_status}
+                                </span>
+                            </li>
+                        </ul>
+                    ` : ''}
+                `;
+            } else {
+                html += `
+                    <h6><i class="fas fa-video text-danger"></i> Video Statistics Update Failed:</h6>
+                    <p class="text-danger mb-3">${results.videos.error}</p>
+                `;
+            }
+        }
+        
+        // Error Summary
+        if (hasErrors && results.errors.length > 0) {
+            html += `
+                <h6><i class="fas fa-exclamation-triangle text-warning"></i> Issues Encountered:</h6>
+                <ul class="list-unstyled mb-3 text-warning">
+            `;
+            results.errors.forEach(error => {
+                html += `<li><small>• ${error}</small></li>`;
+            });
+            html += '</ul>';
+        }
+        
+        html += '</div>';
+        
+        // Show results
+        Swal.fire({
+            title: hasSuccess ? 'Refresh Completed!' : 'Refresh Failed',
+            html: html,
+            icon: hasSuccess ? (hasErrors ? 'warning' : 'success') : 'error',
+            confirmButtonText: 'OK',
+            confirmButtonColor: hasSuccess ? '#28a745' : '#dc3545',
+            customClass: {
+                popup: 'swal-wide'
+            }
+        });
+        
+        // Reload table and KPI data if any operation was successful
+        if (hasSuccess) {
+            kolTable.ajax.reload(null, false);
+            loadKpiData();
+        }
+        
+        // Re-enable the button
+        btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i>');
+    }
+
+
+    function performRefreshOperations(username, refreshFollowers, refreshVideos, btn) {
+        const results = {
+            followers: null,
+            videos: null,
+            errors: []
+        };
+        
+        let completedOperations = 0;
+        const totalOperations = (refreshFollowers ? 1 : 0) + (refreshVideos ? 1 : 0);
+        
+        function updateProgress(message) {
+            $('#refresh-progress p').text(message);
+        }
+        
+        function checkCompletion() {
+            completedOperations++;
+            if (completedOperations >= totalOperations) {
+                showRefreshResults(username, results, btn);
+            }
+        }
+        
+        // Refresh followers data
+        if (refreshFollowers) {
+            updateProgress('Fetching follower data from social media APIs...');
+            
+            $.get('{{ route("kol.refreshSingle", ":username") }}'.replace(':username', username))
+                .done(function(response) {
+                    results.followers = {
+                        success: true,
+                        data: response
+                    };
+                    updateProgress('Follower data updated successfully. Processing video statistics...');
+                })
+                .fail(function(xhr) {
+                    const response = xhr.responseJSON;
+                    results.followers = {
+                        success: false,
+                        error: response?.error || 'Failed to refresh follower data'
+                    };
+                    results.errors.push('Follower refresh failed: ' + (response?.error || 'Unknown error'));
+                    updateProgress('Follower refresh failed. Continuing with video statistics...');
+                })
+                .always(function() {
+                    checkCompletion();
+                });
+        }
+        
+        // Refresh video statistics
+        if (refreshVideos) {
+            if (!refreshFollowers) {
+                updateProgress('Fetching video statistics...');
+            }
+            
+            $.get('{{ route("kol.fetch.video.stats") }}', {
+                username: username,
+                tenant_id: {{ Auth::user()->current_tenant_id }}
+            })
+            .done(function(response) {
+                results.videos = {
+                    success: response.success,
+                    data: response
+                };
+                if (!response.success) {
+                    results.errors.push('Video stats failed: ' + response.message);
+                }
+                updateProgress('Video statistics processed successfully.');
+            })
+            .fail(function(xhr) {
+                const response = xhr.responseJSON;
+                results.videos = {
+                    success: false,
+                    error: response?.message || 'Failed to refresh video statistics'
+                };
+                results.errors.push('Video stats failed: ' + (response?.message || 'Unknown error'));
+                updateProgress('Video statistics refresh failed.');
+            })
+            .always(function() {
+                checkCompletion();
+            });
+        }
+    }
 
     // Open edit modal
     window.openEditModal = function(kolId) {

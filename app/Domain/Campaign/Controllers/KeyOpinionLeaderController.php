@@ -1233,7 +1233,7 @@ class KeyOpinionLeaderController extends Controller
         }
         
         try {
-            if ($keyOpinionLeader->channel === 'tiktok_video') {
+            if ($keyOpinionLeader->channel === 'tiktok') {
                 $url = "https://tokapi-mobile-version.p.rapidapi.com/v1/user/@{$username}";
                 $headers = [
                     'x-rapidapi-host' => 'tokapi-mobile-version.p.rapidapi.com',
@@ -1254,7 +1254,7 @@ class KeyOpinionLeaderController extends Controller
             if ($response->successful()) {
                 $data = $response->json();
                 
-                if ($keyOpinionLeader->channel === 'tiktok_video') {
+                if ($keyOpinionLeader->channel === 'tiktok') {
                     $followers = $data['user']['follower_count'] ?? 0;
                     $following = $data['user']['following_count'] ?? 0;
                     $totalLikes = $data['user']['total_favorited'] ?? 0;
@@ -1293,33 +1293,77 @@ class KeyOpinionLeaderController extends Controller
                     $updateData['engagement_rate'] = $engagementRate;
                 }
 
+                // Store old values for comparison
+                $oldFollowers = $keyOpinionLeader->followers;
+                $oldFollowing = $keyOpinionLeader->following;
+                $oldTotalLikes = $keyOpinionLeader->total_likes;
+                $oldVideoCount = $keyOpinionLeader->video_count;
+                $oldEngagementRate = $keyOpinionLeader->engagement_rate;
+
                 // Recalculate CPM and status after updating
                 $avgViews = $keyOpinionLeader->average_view ?: 0;
                 $rate = $keyOpinionLeader->rate ?: 0;
-                $cpm = $avgViews > 0 ? ($rate / $avgViews) * 1000 : 0;
-                $updateData['cpm'] = round($cpm, 2);
-                $updateData['status_recommendation'] = $cpm < 25000 ? 'Worth it' : 'Gagal';
                 
                 $keyOpinionLeader->update($updateData);
                 
                 return response()->json([
+                    'success' => true,
                     'followers' => $followers,
                     'following' => $following,
                     'total_likes' => $totalLikes,
                     'video_count' => $videoCount,
                     'engagement_rate' => $engagementRate,
-                    'cpm' => $updateData['cpm'],
-                    'status_recommendation' => $updateData['status_recommendation'],
-                    'message' => 'Profile data updated successfully.',
+                    'kol_info' => [
+                        'id' => $keyOpinionLeader->id,
+                        'username' => $keyOpinionLeader->username,
+                        'channel' => $keyOpinionLeader->channel,
+                    ],
+                    'changes' => [
+                        'followers' => [
+                            'old' => $oldFollowers,
+                            'new' => $followers,
+                            'difference' => $followers - ($oldFollowers ?: 0)
+                        ],
+                        'following' => [
+                            'old' => $oldFollowing,
+                            'new' => $following,
+                            'difference' => $following - ($oldFollowing ?: 0)
+                        ],
+                        'total_likes' => [
+                            'old' => $oldTotalLikes,
+                            'new' => $totalLikes,
+                            'difference' => $totalLikes - ($oldTotalLikes ?: 0)
+                        ],
+                        'video_count' => [
+                            'old' => $oldVideoCount,
+                            'new' => $videoCount,
+                            'difference' => $videoCount - ($oldVideoCount ?: 0)
+                        ],
+                    ],
+                    'message' => 'Follower and profile data updated successfully.',
                 ]);
                 
             } else {
-                return response()->json(['error' => 'Failed to fetch data from API'], $response->status());
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Failed to fetch data from API',
+                    'api_status' => $response->status(),
+                    'api_response' => $response->body()
+                ], $response->status());
             }
             
         } catch (Exception $e) {
-            Log::error('Error refreshing single KOL: ' . $e->getMessage());
-            return response()->json(['error' => 'An error occurred while refreshing data', 'details' => $e->getMessage()], 500);
+            Log::error('Error refreshing single KOL followers: ' . $e->getMessage(), [
+                'username' => $username,
+                'kol_id' => $keyOpinionLeader->id ?? null,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'An error occurred while refreshing follower data',
+                'details' => $e->getMessage()
+            ], 500);
         }
     }
 
