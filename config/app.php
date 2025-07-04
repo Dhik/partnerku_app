@@ -179,6 +179,7 @@ return [
         App\Domain\Payroll\Providers\PayrollProvider::class,
         App\Domain\User\Providers\UserProvider::class,
         App\Domain\Niche\Providers\NicheProvider::class,
+        App\Domain\Product\Providers\ProductProvider::class,
     ])->toArray(),
 
     /*

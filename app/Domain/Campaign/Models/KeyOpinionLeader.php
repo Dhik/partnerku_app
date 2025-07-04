@@ -5,6 +5,7 @@ namespace App\Domain\Campaign\Models;
 use App\Domain\Campaign\Enums\KeyOpinionLeaderEnum;
 use App\Domain\Tenant\Traits\FilterByTenant;
 use App\Domain\User\Models\User;
+use App\Domain\Campaign\Models\CampaignContent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -77,6 +78,11 @@ class KeyOpinionLeader extends Model
         }
 
         return null;
+    }
+
+    public function campaignContents()
+    {
+        return $this->hasMany(CampaignContent::class, 'key_opinion_leader_id');
     }
 
     /**

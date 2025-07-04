@@ -334,7 +334,12 @@ return [
             'icon' => 'nav-icon far fa-circle text-info',
             'can' => [PermissionEnum::ViewOtherSpent],
         ],
-        
+        [
+            'text' => 'Product',
+            'url' => 'admin/product',
+            'icon' => 'nav-icon far fa-circle text-info',
+            'can' => [PermissionEnum::ViewOtherSpent],
+        ],
         [
             'text' => 'Campaign Management',
             'can' => [

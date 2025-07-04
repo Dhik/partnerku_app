@@ -652,6 +652,15 @@ class KeyOpinionLeaderController extends Controller
             $data['created_by'] = Auth::id();
             $data['tenant_id'] = Auth::user()->current_tenant_id;
             
+            // Set fixed values as per requirements
+            $data['average_view'] = 1; // Fixed value as per requirement
+            $data['address'] = null;   // Set address as null as per requirement
+            
+            // Set price_per_slot same as rate
+            if (isset($data['rate'])) {
+                $data['price_per_slot'] = $data['rate'];
+            }
+            
             // Process video_10_links - filter out empty values
             if (isset($data['video_10_links']) && is_array($data['video_10_links'])) {
                 $videoLinks = array_filter($data['video_10_links'], function($link) {
@@ -664,11 +673,11 @@ class KeyOpinionLeaderController extends Controller
                 $data['video_10_links'] = json_encode([]);
             }
             
-            // Calculate CPM and status - Fix data type conversion
-            $avgViews = isset($data['average_view']) ? (float) $data['average_view'] : 0;
+            // Calculate CPM and status - with fixed average_view = 1
+            $avgViews = 1; // Fixed value as per requirement
             $rate = isset($data['rate']) ? (float) $data['rate'] : 0;
             
-            $cpm = $avgViews > 0 ? ($rate / $avgViews) * 1000 : 0;
+            $cpm = $rate > 0 ? ($rate / $avgViews) * 1000 : 0;
             $data['cpm'] = (int) round($cpm, 0); // Store as integer in database
             $data['status_recommendation'] = $cpm < 25000 ? 'Worth it' : 'Gagal';
 
@@ -679,15 +688,6 @@ class KeyOpinionLeaderController extends Controller
                     $data[$field] = $data[$field] !== '' ? (int) $data[$field] : null;
                 }
             }
-
-            // Debug logging
-            Log::info('Creating KOL with data:', [
-                'username' => $data['username'] ?? 'not set',
-                'channel' => $data['channel'] ?? 'not set',
-                'average_view' => $data['average_view'] ?? 'not set',
-                'pic_contact' => $data['pic_contact'] ?? 'not set',
-                'video_links_count' => count(json_decode($data['video_10_links'], true)),
-            ]);
 
             $kol = KeyOpinionLeader::create($data);
             
@@ -798,19 +798,49 @@ class KeyOpinionLeaderController extends Controller
         try {
             $data = $request->validated();
             
-            // Calculate CPM and status
-            $avgViews = $data['average_view'] ?? $keyOpinionLeader->average_view ?? 0;
-            $rate = $data['rate'] ?? $keyOpinionLeader->rate ?? 0;
+            // Set price_per_slot same as rate (as per requirement)
+            if (isset($data['rate'])) {
+                $data['price_per_slot'] = $data['rate'];
+            }
+            
+            // Set address as null (as per requirement)
+            $data['address'] = null;
+            
+            // Process video_10_links - filter out empty values
+            if (isset($data['video_10_links']) && is_array($data['video_10_links'])) {
+                $videoLinks = array_filter($data['video_10_links'], function($link) {
+                    return !empty(trim($link));
+                });
+                
+                // Re-index array to remove gaps and store as JSON
+                $data['video_10_links'] = json_encode(array_values($videoLinks));
+            }
+            
+            // Calculate CPM and status - use existing average_view or keep current value
+            $avgViews = $keyOpinionLeader->average_view ?? 1; // Use existing average_view from database
+            $rate = isset($data['rate']) ? (float) $data['rate'] : ($keyOpinionLeader->rate ?? 0);
+            
             $cpm = $avgViews > 0 ? ($rate / $avgViews) * 1000 : 0;
-            $data['cpm'] = round($cpm, 2);
+            $data['cpm'] = (int) round($cpm, 0); // Store as integer in database
             $data['status_recommendation'] = $cpm < 25000 ? 'Worth it' : 'Gagal';
+            
+            // Ensure numeric fields are properly cast
+            $numericFields = ['rate', 'price_per_slot', 'gmv'];
+            foreach ($numericFields as $field) {
+                if (isset($data[$field])) {
+                    $data[$field] = $data[$field] !== '' ? (int) $data[$field] : null;
+                }
+            }
             
             $keyOpinionLeader->update($data);
             
             if ($request->ajax()) {
+                $videoLinksCount = isset($data['video_10_links']) ? count(json_decode($data['video_10_links'], true)) : 0;
+                
                 return response()->json([
                     'success' => true,
-                    'message' => trans('messages.success_update', ['model' => trans('labels.key_opinion_leader')]),
+                    'message' => trans('messages.success_update', ['model' => trans('labels.key_opinion_leader')]) . 
+                            ' (' . $videoLinksCount . ' video links saved)',
                     'data' => $keyOpinionLeader->fresh()
                 ]);
             }
@@ -822,17 +852,37 @@ class KeyOpinionLeaderController extends Controller
                     'message' => trans('messages.success_update', ['model' => trans('labels.key_opinion_leader')]),
                 ]);
                 
-        } catch (\Exception $e) {
-            Log::error('Error updating KOL: ' . $e->getMessage());
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error updating KOL:', $e->errors());
             
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to update KOL information.'
+                    'message' => 'Validation failed.',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            
+            return redirect()->back()
+                ->withInput()
+                ->withErrors($e->errors());
+                
+        } catch (\Exception $e) {
+            Log::error('Error updating KOL: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'input' => $request->all()
+            ]);
+            
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update KOL information: ' . $e->getMessage()
                 ], 500);
             }
             
-            return redirect()->back()->withErrors(['error' => 'Failed to update KOL information.']);
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['error' => 'Failed to update KOL information: ' . $e->getMessage()]);
         }
     }
 
@@ -844,18 +894,33 @@ class KeyOpinionLeaderController extends Controller
         $this->authorize('deleteKOL', KeyOpinionLeader::class);
 
         try {
+            DB::beginTransaction();
+
+            // Delete related statistics first (if they reference campaign_contents)
+            $campaignContentIds = $keyOpinionLeader->campaignContents()->pluck('id');
+            if ($campaignContentIds->isNotEmpty()) {
+                Statistic::whereIn('campaign_content_id', $campaignContentIds)->delete();
+            }
+
+            // Delete related campaign contents
+            $keyOpinionLeader->campaignContents()->delete();
+
+            // Finally delete the KOL
             $keyOpinionLeader->delete();
+
+            DB::commit();
             
             return response()->json([
                 'success' => true,
                 'message' => trans('messages.success_delete', ['model' => trans('labels.key_opinion_leader')])
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Error deleting KOL: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete KOL.'
+                'message' => 'Failed to delete KOL and related data.'
             ], 500);
         }
     }

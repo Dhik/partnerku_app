@@ -25,7 +25,6 @@ class KeyOpinionLeaderRequest extends FormRequest
                 })->ignore($kolId)
             ],
             'niche' => ['nullable', 'string', 'max:255'],
-            'average_view' => ['required', 'numeric', 'integer', 'min:1'],
             'content_type' => ['nullable', 'string', 'max:255'],
             'rate' => ['nullable', 'numeric', 'integer', 'min:0'],
             'pic_contact' => ['required', 'exists:users,id'],
@@ -37,9 +36,7 @@ class KeyOpinionLeaderRequest extends FormRequest
             
             // Additional fields
             'name' => ['nullable', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:1000'],
             'link' => ['nullable', 'url', 'max:500'],
-            'price_per_slot' => ['nullable', 'numeric', 'integer', 'min:0'],
             'category' => ['nullable', 'string', 'max:255'],
             'tier' => ['nullable', 'string', 'max:255'],
             'gmv' => ['nullable', 'numeric', 'integer', 'min:0'],
@@ -60,10 +57,6 @@ class KeyOpinionLeaderRequest extends FormRequest
             'username.regex' => 'Username can only contain letters, numbers, dots, hyphens and underscores.',
             'username.unique' => 'This username already exists for the selected channel.',
             'niche.max' => 'Niche must not exceed 255 characters.',
-            'average_view.required' => 'Average view is required.',
-            'average_view.numeric' => 'Average view must be a number.',
-            'average_view.integer' => 'Average view must be an integer.',
-            'average_view.min' => 'Average view must be at least 1.',
             'content_type.max' => 'Content type must not exceed 255 characters.',
             'rate.numeric' => 'Rate must be a number.',
             'rate.integer' => 'Rate must be an integer.',
@@ -79,12 +72,8 @@ class KeyOpinionLeaderRequest extends FormRequest
             
             // Additional field messages
             'name.max' => 'Name must not exceed 255 characters.',
-            'address.max' => 'Address must not exceed 1000 characters.',
             'link.url' => 'Link must be a valid URL.',
             'link.max' => 'Link must not exceed 500 characters.',
-            'price_per_slot.numeric' => 'Price per slot must be a number.',
-            'price_per_slot.integer' => 'Price per slot must be an integer.',
-            'price_per_slot.min' => 'Price per slot must be at least 0.',
             'gmv.numeric' => 'GMV must be a number.',
             'gmv.integer' => 'GMV must be an integer.',
             'gmv.min' => 'GMV must be at least 0.',
@@ -102,7 +91,7 @@ class KeyOpinionLeaderRequest extends FormRequest
     protected function prepareForValidation()
     {
         // Clean up numeric fields - convert empty strings to null
-        $numericFields = ['rate', 'price_per_slot', 'gmv', 'average_view'];
+        $numericFields = ['rate', 'gmv'];
         
         foreach ($numericFields as $field) {
             if ($this->has($field) && $this->input($field) === '') {
@@ -111,7 +100,7 @@ class KeyOpinionLeaderRequest extends FormRequest
         }
         
         // Clean up string fields - trim whitespace
-        $stringFields = ['username', 'name', 'phone_number', 'niche', 'content_type', 'pic_listing', 'pic_content', 'address'];
+        $stringFields = ['username', 'name', 'phone_number', 'niche', 'content_type', 'pic_listing', 'pic_content'];
         
         foreach ($stringFields as $field) {
             if ($this->has($field) && is_string($this->input($field))) {

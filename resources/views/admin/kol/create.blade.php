@@ -183,22 +183,6 @@
                                 <span class="invalid-feedback">{{ $message }}</span>
                             @enderror
                         </div>
-
-                        <!-- Add missing average_view field -->
-                        <div class="form-group">
-                            <label for="average_view">Average Views <span class="text-danger">*</span></label>
-                            <input type="number" 
-                                   class="form-control @error('average_view') is-invalid @enderror" 
-                                   id="average_view" 
-                                   name="average_view" 
-                                   value="{{ old('average_view') }}"
-                                   min="1"
-                                   required
-                                   placeholder="Enter average views">
-                            @error('average_view')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                        </div>
                     </div>
                 </div>
             </div>
@@ -213,7 +197,7 @@
                     </div>
                     <div class="card-body">
                         <div class="form-group">
-                            <label for="rate">Rate per Content</label>
+                            <label for="rate">Rate per Content/Slot</label>
                             <div class="input-group">
                                 <div class="input-group-prepend">
                                     <span class="input-group-text">Rp</span>
@@ -230,25 +214,7 @@
                             @error('rate')
                                 <span class="invalid-feedback">{{ $message }}</span>
                             @enderror
-                        </div>
-
-                        <div class="form-group">
-                            <label for="price_per_slot">Price per Slot</label>
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text">Rp</span>
-                                </div>
-                                <input type="number" 
-                                       class="form-control @error('price_per_slot') is-invalid @enderror" 
-                                       id="price_per_slot" 
-                                       name="price_per_slot" 
-                                       value="{{ old('price_per_slot') }}"
-                                       min="0"
-                                       placeholder="0">
-                            </div>
-                            @error('price_per_slot')
-                                <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
+                            <small class="form-text text-muted">This rate will be used for both content and slot pricing</small>
                         </div>
 
                         <div class="form-group">
@@ -283,7 +249,7 @@
                                     <h4 id="cpm-status-badge">-</h4>
                                 </div>
                             </div>
-                            <small class="text-muted">Formula: (Rate ÷ Average Views) × 1000</small>
+                            <small class="text-muted">Formula: (Rate ÷ 1) × 1000</small>
                         </div>
                     </div>
                 </div>
@@ -339,7 +305,7 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label for="pic_contact">PIC Contact <span class="text-danger">*</span></label>
                                     <select class="form-control @error('pic_contact') is-invalid @enderror" 
@@ -362,7 +328,7 @@
                                 </div>
                             </div>
                             
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label for="pic_listing">PIC Listing</label>
                                     <input type="text" 
@@ -376,10 +342,8 @@
                                     @enderror
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
+                            
+                            <div class="col-md-4">
                                 <div class="form-group">
                                     <label for="pic_content">PIC Content</label>
                                     <input type="text" 
@@ -389,20 +353,6 @@
                                            value="{{ old('pic_content') }}"
                                            placeholder="Person in charge of content">
                                     @error('pic_content')
-                                        <span class="invalid-feedback">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="address">Address</label>
-                                    <textarea class="form-control @error('address') is-invalid @enderror" 
-                                              id="address" 
-                                              name="address" 
-                                              rows="3"
-                                              placeholder="Enter complete address">{{ old('address') }}</textarea>
-                                    @error('address')
                                         <span class="invalid-feedback">{{ $message }}</span>
                                     @enderror
                                 </div>
@@ -475,12 +425,12 @@
 <script>
 $(document).ready(function() {
     
-    // CPM Calculation
+    // CPM Calculation (with average_view = 1)
     function calculateCPM() {
         const rate = parseFloat($('#rate').val()) || 0;
-        const avgView = parseFloat($('#average_view').val()) || 0;
+        const avgView = 1; // Fixed value as per requirement
         
-        if (rate > 0 && avgView > 0) {
+        if (rate > 0) {
             const cpm = (rate / avgView) * 1000;
             const status = cpm < 25000 ? 'Worth it' : 'Gagal';
             const statusClass = cpm < 25000 ? 'badge badge-success' : 'badge badge-danger';
@@ -494,7 +444,7 @@ $(document).ready(function() {
     }
 
     // Auto-calculate on input change
-    $('#rate, #average_view').on('input', calculateCPM);
+    $('#rate').on('input', calculateCPM);
     $('#calculate-cpm-btn').click(calculateCPM);
 
     // Form validation and submission
@@ -513,11 +463,6 @@ $(document).ready(function() {
         if (!$('#channel').val()) {
             isValid = false;
             errorMessages.push('Channel is required');
-        }
-
-        if (!$('#average_view').val() || parseFloat($('#average_view').val()) <= 0) {
-            isValid = false;
-            errorMessages.push('Average View is required and must be greater than 0');
         }
 
         if (!$('#pic_contact').val()) {
@@ -552,18 +497,10 @@ $(document).ready(function() {
         }
     });
 
-    // Auto-calculate CPM on page load if values exist
-    if ($('#rate').val() && $('#average_view').val()) {
+    // Auto-calculate CPM on page load if rate exists
+    if ($('#rate').val()) {
         calculateCPM();
     }
-
-    // Debug: Log when page loads
-    console.log('Create KOL form loaded');
-    console.log('Available variables:');
-    console.log('Channels:', @json($channels ?? []));
-    console.log('Niches:', @json($niches ?? []));
-    console.log('Content Types:', @json($contentTypes ?? []));
-    console.log('Marketing Users:', @json($marketingUsers ?? []));
 });
 </script>
 @stop
