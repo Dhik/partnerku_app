@@ -257,9 +257,8 @@ class CampaignController extends Controller
     public function edit(Campaign $campaign): View|\Illuminate\Foundation\Application|Factory|Application
     {
         $this->authorize('UpdateCampaign', $campaign);
-        $budgets = Budget::all();
 
-        return view('admin.campaign.edit', compact('campaign', 'budgets'));
+        return view('admin.campaign.edit', compact('campaign'));
     }
 
     /**
