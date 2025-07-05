@@ -357,16 +357,6 @@ return [
                     'active' => ['admin/kol', 'admin/kol/create*', 'admin/kol/edit*', 'admin/kol/show*', 'admin/kol/get*']
                 ],
                 [
-                    'text' => 'KOL Dealing [Approve]',
-                    'url' => 'admin/kol',
-                    'icon' => 'nav-icon far fa-circle',
-                    'can' => [
-                        PermissionEnum::ViewKOL,
-                        PermissionEnum::CreateKOL
-                    ],
-                    'active' => ['admin/kol', 'admin/kol/create*', 'admin/kol/edit*', 'admin/kol/show*', 'admin/kol/get*']
-                ],
-                [
                     'text' => 'Product',
                     'url' => 'admin/product',
                     'icon' => 'nav-icon far fa-circle text-info',
