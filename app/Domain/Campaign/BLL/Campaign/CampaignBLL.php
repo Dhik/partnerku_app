@@ -87,7 +87,8 @@ class CampaignBLL extends BaseBLL implements CampaignBLLInterface
             'title' => $request->input('title'),
             'start_date' => $period->startDate,
             'end_date' => $period->endDate,
-            'description' => $request->input('description')
+            'description' => $request->input('description'),
+            'cpm_benchmark' => $request->input('cpm_benchmark')
         ];
 
         return $this->campaignDAL->updateCampaign($campaign, $data);
