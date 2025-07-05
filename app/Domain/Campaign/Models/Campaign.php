@@ -8,12 +8,13 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
+// Remove these media library imports
+// use Spatie\MediaLibrary\HasMedia;
+// use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Campaign extends Model implements HasMedia
+class Campaign extends Model // Remove "implements HasMedia"
 {
-    use FilterByTenant, InteractsWithMedia;
+    use FilterByTenant; // Remove "InteractsWithMedia" trait
 
     protected $fillable = [
         'title',
@@ -46,7 +47,6 @@ class Campaign extends Model implements HasMedia
     {
         return $this->hasMany(Statistic::class);
     }
-
 
     /**
      * Casting start date
