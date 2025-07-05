@@ -347,7 +347,17 @@ return [
                     'active' => ['admin/campaign*']
                 ],
                 [
-                    'text' => 'Key Opinion Leaders',
+                    'text' => 'KOL Database',
+                    'url' => 'admin/kol',
+                    'icon' => 'nav-icon far fa-circle',
+                    'can' => [
+                        PermissionEnum::ViewKOL,
+                        PermissionEnum::CreateKOL
+                    ],
+                    'active' => ['admin/kol', 'admin/kol/create*', 'admin/kol/edit*', 'admin/kol/show*', 'admin/kol/get*']
+                ],
+                [
+                    'text' => 'KOL Dealing [Approve]',
                     'url' => 'admin/kol',
                     'icon' => 'nav-icon far fa-circle',
                     'can' => [
