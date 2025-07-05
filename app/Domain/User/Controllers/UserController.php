@@ -169,13 +169,36 @@ class UserController extends Controller
      * Remove the specified resource from storage.
      */
     public function destroy(User $user): JsonResponse
-    {
-        $this->authorize(PermissionEnum::DeleteUser, [User::class, $user]);
+{
+    $this->authorize(PermissionEnum::DeleteUser, [User::class, $user]);
 
+    try {
+        // Start database transaction
+        DB::beginTransaction();
+        
+        // First, detach all tenants from the user (remove from pivot table)
+        $user->tenants()->detach();
+        
+        // Then delete the user
         $this->userBLL->deleteUser($user);
-
+        
+        // Commit the transaction
+        DB::commit();
+        
         return response()->json(['message' => trans('messages.success_delete')]);
+        
+    } catch (\Exception $e) {
+        // Rollback the transaction if something goes wrong
+        DB::rollBack();
+        
+        // Log the error for debugging
+        \Log::error('Error deleting user: ' . $e->getMessage());
+        
+        return response()->json([
+            'message' => 'Unable to delete user. Please try again or contact administrator.'
+        ], 500);
     }
+}
 
     /**
      * Reset password by admin
