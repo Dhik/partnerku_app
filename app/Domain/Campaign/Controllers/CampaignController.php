@@ -235,7 +235,7 @@ class CampaignController extends Controller
             ->where('username', '!=', '')
             ->whereNotNull('cpm')
             ->where('cpm', '>', 0)
-            ->where('cpm', '<', $campaign->cpm)
+            ->where('cpm', '<', $campaign->cpm_benchmark)
             ->orderBy('username')
             ->get(['username', 'name', 'channel', 'cpm']);
 
