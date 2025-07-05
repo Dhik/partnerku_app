@@ -204,9 +204,11 @@ class CampaignController extends Controller
             ->pluck('username');
 
         $worthyKols = DB::table('key_opinion_leaders')
-            ->where('key_opinion_leaders.tenant_id', Auth::user()->current_tenant_id)
+            ->where('tenant_id', Auth::user()->current_tenant_id)
+            ->whereNotNull('username')
+            ->where('username', '!=', '')
+            ->orderBy('username')
             ->where('key_opinion_leaders.cpm', '<', $campaign->cpm)
-            ->orderBy('key_opinion_leaders.username')
             ->get(['username', 'name', 'channel']);
 
         $products = DB::table('products')

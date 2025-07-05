@@ -335,12 +335,6 @@ return [
             'can' => [PermissionEnum::ViewOtherSpent],
         ],
         [
-            'text' => 'Product',
-            'url' => 'admin/product',
-            'icon' => 'nav-icon far fa-circle text-info',
-            'can' => [PermissionEnum::CreateKOL],
-        ],
-        [
             'text' => 'Campaign Management',
             'can' => [PermissionEnum::CreateKOL],
             'icon' => 'fas fa-fw fa-bullhorn',
@@ -361,6 +355,12 @@ return [
                         PermissionEnum::CreateKOL
                     ],
                     'active' => ['admin/kol', 'admin/kol/create*', 'admin/kol/edit*', 'admin/kol/show*', 'admin/kol/get*']
+                ],
+                [
+                    'text' => 'Product',
+                    'url' => 'admin/product',
+                    'icon' => 'nav-icon far fa-circle text-info',
+                    'can' => [PermissionEnum::CreateKOL],
                 ],
                 // [
                 //     'text' => 'Worth It KOLs',
