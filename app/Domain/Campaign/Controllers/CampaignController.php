@@ -203,13 +203,45 @@ class CampaignController extends Controller
             ->distinct()
             ->pluck('username');
 
+        // Debug: Log campaign CPM
+        \Log::info('Campaign CPM: ' . $campaign->cpm);
+        
+        // Debug: Check all KOLs first
+        $allKols = DB::table('key_opinion_leaders')
+            ->where('tenant_id', Auth::user()->current_tenant_id)
+            ->whereNotNull('username')
+            ->where('username', '!=', '')
+            ->get(['username', 'name', 'channel', 'cpm']);
+        
+        \Log::info('All KOLs count: ' . $allKols->count());
+        \Log::info('All KOLs data: ', $allKols->toArray());
+
+        // Debug: Check KOLs with CPM values
+        $kolsWithCpm = DB::table('key_opinion_leaders')
+            ->where('tenant_id', Auth::user()->current_tenant_id)
+            ->whereNotNull('username')
+            ->where('username', '!=', '')
+            ->whereNotNull('cpm')
+            ->where('cpm', '>', 0)
+            ->get(['username', 'name', 'channel', 'cpm']);
+        
+        \Log::info('KOLs with CPM count: ' . $kolsWithCpm->count());
+        \Log::info('KOLs with CPM: ', $kolsWithCpm->toArray());
+
+        // Main query with proper conditions
         $worthyKols = DB::table('key_opinion_leaders')
             ->where('tenant_id', Auth::user()->current_tenant_id)
             ->whereNotNull('username')
             ->where('username', '!=', '')
+            ->whereNotNull('cpm')
+            ->where('cpm', '>', 0)
+            ->where('cpm', '<', $campaign->cpm)
             ->orderBy('username')
-            ->where('key_opinion_leaders.cpm', '<', $campaign->cpm)
-            ->get(['username', 'name', 'channel']);
+            ->get(['username', 'name', 'channel', 'cpm']);
+
+        // Debug: Log worthy KOLs
+        \Log::info('Worthy KOLs count: ' . $worthyKols->count());
+        \Log::info('Worthy KOLs data: ', $worthyKols->toArray());
 
         $products = DB::table('products')
             ->where('tenant_id', Auth::user()->current_tenant_id)
