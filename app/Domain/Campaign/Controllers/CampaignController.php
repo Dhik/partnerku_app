@@ -286,17 +286,13 @@ class CampaignController extends Controller
     {
         $this->authorize('deleteCampaign', $campaign);
 
-        try {
-            // Delete related campaign contents first
-            CampaignContent::where('campaign_id', $campaign->id)->delete();
+        // Delete related campaign contents first
+        CampaignContent::where('campaign_id', $campaign->id)->delete();
 
-            // Then delete the campaign itself
-            $this->campaignBLL->deleteCampaign($campaign);
+        // Then delete the campaign itself
+        $this->campaignBLL->deleteCampaign($campaign);
 
-            return response()->json(['message' => trans('messages.success_delete')]);
-        } catch (Exception $e) {
-            return response()->json(['message' => trans('messages.campaign_failed_delete')], 500);
-        }
+        return response()->json(['message' => trans('messages.success_delete')]);
     }
 
     /**
