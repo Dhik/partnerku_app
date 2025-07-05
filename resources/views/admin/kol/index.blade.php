@@ -67,102 +67,85 @@
 
     <!-- Filters and Actions -->
     <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Filters & Actions</h3>
-                    <div class="card-tools">
-                        @can('createKOL', App\Domain\Campaign\Models\KeyOpinionLeader::class)
-                            <a href="{{ route('kol.create') }}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-plus"></i> Add KOL
-                            </a>
-                            <!-- <a href="{{ route('kol.createExcel') }}" class="btn btn-success btn-sm">
-                                <i class="fas fa-file-excel"></i> Import Excel
-                            </a> -->
-                        @endcan
-                        <!-- @can('viewKOL', App\Domain\Campaign\Models\KeyOpinionLeader::class)
-                            <button type="button" class="btn btn-info btn-sm" id="export-btn">
-                                <i class="fas fa-download"></i> Export
-                            </button>
-                        @endcan -->
-                    </div>
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Filters & Actions</h3>
+                <div class="card-tools">
+                    @can('createKOL', App\Domain\Campaign\Models\KeyOpinionLeader::class)
+                        <a href="{{ route('kol.create') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Add KOL
+                        </a>
+                    @endcan
                 </div>
-                <div class="card-body">
-                    <form id="filter-form">
-                        <div class="row">
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>Channel</label>
-                                    <select name="channel" id="filter-channel" class="form-control">
-                                        <option value="">All Channels</option>
-                                        @foreach($channels as $channel)
-                                            <option value="{{ $channel }}">{{ ucfirst(str_replace('_', ' ', $channel)) }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>Niche</label>
-                                    <select name="niche" id="filter-niche" class="form-control">
-                                        <option value="">All Niches</option>
-                                        @foreach($niches as $niche)
-                                            <option value="{{ $niche->name }}">{{ ucfirst($niche->name) }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>Content Type</label>
-                                    <select name="content_type" id="filter-content-type" class="form-control">
-                                        <option value="">All Content Types</option>
-                                        @foreach($contentTypes as $contentType)
-                                            <option value="{{ $contentType }}">{{ ucfirst($contentType) }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>PIC Contact</label>
-                                    <select name="pic_contact" id="filter-pic" class="form-control">
-                                        <option value="">All PICs</option>
-                                        @foreach($marketingUsers as $user)
-                                            <option value="{{ $user->id }}">{{ $user->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>Status Recommendation</label>
-                                    <select name="status_recommendation" id="filter-status-recommendation" class="form-control">
-                                        <option value="">All Status</option>
-                                        <option value="Worth it">Worth it</option>
-                                        <option value="Gagal">Gagal</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>&nbsp;</label>
-                                    <div class="d-flex">
-                                        <button type="button" class="btn btn-primary mr-2" id="apply-filters">
-                                            <i class="fas fa-filter"></i> Apply
-                                        </button>
-                                        <button type="button" class="btn btn-secondary" id="reset-filters">
-                                            <i class="fas fa-undo"></i> Reset
-                                        </button>
-                                    </div>
-                                </div>
+            </div>
+            <div class="card-body">
+                <form id="filter-form">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Approval Status</label>
+                                <select name="approve_status" id="filter-approve-status" class="form-control">
+                                    <option value="">All Status</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="declined">Declined</option>
+                                    <option value="pending">Pending</option>
+                                </select>
                             </div>
                         </div>
-                    </form>
-                </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Status Recommendation</label>
+                                <select name="status_recommendation" id="filter-status-recommendation" class="form-control">
+                                    <option value="">All Status</option>
+                                    <option value="Worth it">Worth it</option>
+                                    <option value="Gagal">Gagal</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Niche</label>
+                                <select name="niche" id="filter-niche" class="form-control">
+                                    <option value="">All Niches</option>
+                                    @foreach($niches as $niche)
+                                        <option value="{{ $niche->name }}">{{ ucfirst($niche->name) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Tier</label>
+                                <select name="tier" id="filter-tier" class="form-control">
+                                    <option value="">All Tiers</option>
+                                    <option value="Nano">Nano (1K - 10K)</option>
+                                    <option value="Micro">Micro (10K - 50K)</option>
+                                    <option value="Mid-Tier">Mid-Tier (50K - 250K)</option>
+                                    <option value="Macro">Macro (250K - 1M)</option>
+                                    <option value="Mega">Mega (1M+)</option>
+                                    <option value="Unknown">Unknown (&lt;1K)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-primary mr-2" id="apply-filters">
+                                    <i class="fas fa-filter"></i> Apply Filters
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="reset-filters">
+                                    <i class="fas fa-undo"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+</div>
 
     <!-- KOL Table -->
     <div class="row">
@@ -548,18 +531,26 @@ $(document).ready(function() {
         ajax: {
             url: '{{ route("kol.get") }}',
             data: function(d) {
-                d.channel = $('#filter-channel').val();
-                d.niche = $('#filter-niche').val();
-                d.content_type = $('#filter-content-type').val();
-                d.pic_contact = $('#filter-pic').val();
+                d.approve_status = $('#filter-approve-status').val();
                 d.status_recommendation = $('#filter-status-recommendation').val();
+                d.niche = $('#filter-niche').val();
+                d.tier = $('#filter-tier').val();
             }
         },
         columns: [
             { data: 'username', name: 'username' },
-            { data: 'channel', name: 'channel' },
             { data: 'niche', name: 'niche' },
-            { data: 'followers', name: 'followers' },
+            { 
+                data: 'followers', 
+                name: 'followers',
+                render: function(data, type, row) {
+                    if (type === 'display' && data != null) {
+                        return new Intl.NumberFormat('id-ID').format(data);
+                    }
+                    return data;
+                }
+            },
+            { data: 'tier_display', name: 'tier_display', orderable: false },
             { 
                 data: 'price_per_slot', 
                 name: 'price_per_slot',
@@ -590,7 +581,8 @@ $(document).ready(function() {
         ],
         order: [[0, 'asc']],
         pageLength: 25,
-        responsive: true
+        responsive: true,
+        scrollX: true
     });
 
     // Add the approval function
@@ -692,11 +684,10 @@ $(document).ready(function() {
     // Load KPI data
     function loadKpiData() {
         const filterData = {
-            channel: $('#filter-channel').val(),
+            approve_status: $('#filter-approve-status').val(),
+            status_recommendation: $('#filter-status-recommendation').val(),
             niche: $('#filter-niche').val(),
-            content_type: $('#filter-content-type').val(),
-            pic_contact: $('#filter-pic').val(),
-            status_recommendation: $('#filter-status-recommendation').val()
+            tier: $('#filter-tier').val()
         };
 
         $.get('{{ route("kol.kpi") }}', filterData, function(data) {

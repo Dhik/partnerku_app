@@ -54,45 +54,61 @@ class KeyOpinionLeaderController extends Controller
     /**
      * Get KOL datatable query
      */
-    protected function getKOLDataTableQuery(Request $request)
-    {
-        $query = KeyOpinionLeader::with(['picContact', 'createdBy'])
-            ->select('key_opinion_leaders.*');
+    private function getKOLDataTableQuery(Request $request)
+{
+    $query = KeyOpinionLeader::with(['picContact'])
+        ->where('tenant_id', Auth::user()->current_tenant_id);
 
-        // Apply filters based on user role and tenant
-        $user = Auth::user();
-        if ($user->hasRole(['client_1', 'client_2'])) {
-            $query->where('tenant_id', $user->current_tenant_id);
-        }
-
-        // Apply search filters
-        if ($request->filled('channel')) {
-            $query->where('channel', $request->input('channel'));
-        }
-
-        if ($request->filled('niche')) {
-            $query->where('niche', $request->input('niche'));
-        }
-
-        if ($request->filled('content_type')) {
-            $query->where('content_type', $request->input('content_type'));
-        }
-
-        if ($request->filled('pic_contact')) {
-            $query->where('pic_contact', $request->input('pic_contact'));
-        }
-
-        if ($request->filled('status_affiliate')) {
-            $query->where('status_affiliate', $request->input('status_affiliate'));
-        }
-
-        // Add status recommendation filter
-        if ($request->filled('status_recommendation')) {
-            $query->where('status_recommendation', $request->input('status_recommendation'));
-        }
-
-        return $query;
+    // Apply filters
+    if ($request->filled('niche')) {
+        $query->where('niche', $request->niche);
     }
+
+    if ($request->filled('status_recommendation')) {
+        $query->where('status_recommendation', $request->status_recommendation);
+    }
+
+    if ($request->filled('approve_status')) {
+        $approveValue = $request->approve_status;
+        if ($approveValue === 'approved') {
+            $query->where('approve', 1);
+        } elseif ($approveValue === 'declined') {
+            $query->where('approve', 0);
+        } elseif ($approveValue === 'pending') {
+            $query->whereNull('approve');
+        }
+    }
+
+    if ($request->filled('tier')) {
+        $tier = $request->tier;
+        switch ($tier) {
+            case 'Nano':
+                $query->whereBetween('followers', [1000, 9999]);
+                break;
+            case 'Micro':
+                $query->whereBetween('followers', [10000, 49999]);
+                break;
+            case 'Mid-Tier':
+                $query->whereBetween('followers', [50000, 249999]);
+                break;
+            case 'Macro':
+                $query->whereBetween('followers', [250000, 999999]);
+                break;
+            case 'Mega':
+                $query->where('followers', '>=', 1000000);
+                break;
+            case 'Unknown':
+                $query->where(function($q) {
+                    $q->where('followers', '<', 1000)
+                      ->orWhereNull('followers');
+                });
+                break;
+        }
+    }
+
+    return $query;
+}
+
 
     /**
      * Calculate CPM and status recommendation
@@ -173,14 +189,12 @@ public function get(Request $request): JsonResponse
         ->addColumn('approval_actions', function ($row) {
             $user = Auth::user();
             
-            // Only allow users with update permission to approve/decline
             if (!$user->can('updateKOL', KeyOpinionLeader::class)) {
                 return '<span class="text-muted">No permission</span>';
             }
             
             $actions = '';
             
-            // Show approve button if not approved
             if ($row->approve !== 1) {
                 $actions .= '<button onclick="updateApprovalStatus(' . $row->id . ', true)" 
                                 class="btn btn-success btn-xs mr-1" 
@@ -189,7 +203,6 @@ public function get(Request $request): JsonResponse
                             </button>';
             }
             
-            // Show decline button if not declined
             if ($row->approve !== 0) {
                 $actions .= '<button onclick="updateApprovalStatus(' . $row->id . ', false)" 
                                 class="btn btn-danger btn-xs" 
@@ -199,62 +212,6 @@ public function get(Request $request): JsonResponse
             }
             
             return $actions ?: '<span class="text-muted">-</span>';
-        })
-        ->addColumn('actions', function ($row) {
-            $user = Auth::user();
-            $actions = '';
-            
-            // WhatsApp button
-            if (!empty($row->phone_number)) {
-                $phoneNumber = preg_replace('/[^0-9]/', '', $row->phone_number);
-                if (substr($phoneNumber, 0, 1) === '0') {
-                    $phoneNumber = '62' . substr($phoneNumber, 1);
-                }
-                $waLink = 'https://wa.me/' . $phoneNumber;
-                
-                $actions .= '<a href="' . $waLink . '" class="btn btn-success btn-xs" target="_blank" title="WhatsApp">
-                                <i class="fab fa-whatsapp"></i>
-                            </a> ';
-            }
-            
-            // View button - all roles can view
-            $actions .= '<a href="' . route('kol.show', $row->id) . '" class="btn btn-info btn-xs" title="View">
-                            <i class="fas fa-eye"></i>
-                        </a> ';
-            
-            // Edit button - Admin, Client1, TimAds can edit (TimInternal cannot edit)
-            if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('updateKOL', KeyOpinionLeader::class)) {
-                $actions .= '<button onclick="openEditModal(' . $row->id . ')" class="btn btn-primary btn-xs" title="Edit">
-                                <i class="fas fa-pencil-alt"></i>
-                            </button> ';
-            }
-            
-            // Delete button - Admin, Client1, TimAds only (TimInternal cannot delete)
-            if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('deleteKOL', KeyOpinionLeader::class)) {
-                $actions .= '<button onclick="deleteKol(' . $row->id . ')" class="btn btn-danger btn-xs" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>';
-            }
-            
-            return $actions;
-        })
-        ->addColumn('refresh_follower', function ($row) {
-            return '<button class="btn btn-info btn-xs refresh-follower" data-id="' . $row->username . '">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>';
-        })
-        ->addColumn('engagement_rate_display', function ($row) {
-            return $row->engagement_rate ? number_format($row->engagement_rate, 2) . '%' : '-';
-        })
-        ->addColumn('cpm_display', function ($row) {
-            return $row->cpm ? number_format($row->cpm, 0, ',', '.') : '-';
-        })
-        ->addColumn('status_recommendation_display', function ($row) {
-            if (!$row->status_recommendation) {
-                return '<span class="badge badge-secondary">-</span>';
-            }
-            $badgeClass = $row->status_recommendation === 'Worth it' ? 'badge-success' : 'badge-danger';
-            return '<span class="badge ' . $badgeClass . '">' . $row->status_recommendation . '</span>';
         })
         ->addColumn('tier_display', function ($row) {
             $followers = $row->followers ?: 0;
@@ -281,6 +238,56 @@ public function get(Request $request): JsonResponse
             
             return '<span class="badge ' . $badgeClass . '">' . $tier . '</span>';
         })
+        ->addColumn('actions', function ($row) {
+            $user = Auth::user();
+            $actions = '';
+            
+            // WhatsApp button
+            if (!empty($row->phone_number)) {
+                $phoneNumber = preg_replace('/[^0-9]/', '', $row->phone_number);
+                if (substr($phoneNumber, 0, 1) === '0') {
+                    $phoneNumber = '62' . substr($phoneNumber, 1);
+                }
+                $waLink = 'https://wa.me/' . $phoneNumber;
+                
+                $actions .= '<a href="' . $waLink . '" class="btn btn-success btn-xs" target="_blank" title="WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                            </a> ';
+            }
+            
+            $actions .= '<a href="' . route('kol.show', $row->id) . '" class="btn btn-info btn-xs" title="View">
+                            <i class="fas fa-eye"></i>
+                        </a> ';
+            
+            if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('updateKOL', KeyOpinionLeader::class)) {
+                $actions .= '<button onclick="openEditModal(' . $row->id . ')" class="btn btn-primary btn-xs" title="Edit">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button> ';
+            }
+            
+            if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('deleteKOL', KeyOpinionLeader::class)) {
+                $actions .= '<button onclick="deleteKol(' . $row->id . ')" class="btn btn-danger btn-xs" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>';
+            }
+            
+            return $actions;
+        })
+        ->addColumn('refresh_follower', function ($row) {
+            return '<button class="btn btn-info btn-xs refresh-follower" data-id="' . $row->username . '">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>';
+        })
+        ->addColumn('cpm_display', function ($row) {
+            return $row->cpm ? number_format($row->cpm, 0, ',', '.') : '-';
+        })
+        ->addColumn('status_recommendation_display', function ($row) {
+            if (!$row->status_recommendation) {
+                return '<span class="badge badge-secondary">-</span>';
+            }
+            $badgeClass = $row->status_recommendation === 'Worth it' ? 'badge-success' : 'badge-danger';
+            return '<span class="badge ' . $badgeClass . '">' . $row->status_recommendation . '</span>';
+        })
         ->editColumn('rate', function ($row) {
             return number_format($row->rate, 0, ',', '.');
         })
@@ -298,41 +305,69 @@ public function get(Request $request): JsonResponse
         ])
         ->toJson();
 }
-    public function getKpiData(Request $request): JsonResponse
-    {
-        $this->authorize('viewKOL', KeyOpinionLeader::class);
-        
-        $query = $this->getKOLDataTableQuery($request);
-        $filteredKols = $query->get();
-        
-        $totalKol = $filteredKols->count();
-        $worthItCount = 0;
-        $totalCpm = 0;
-        $validCpmCount = 0;
-        
-        foreach ($filteredKols as $kol) {
-            // Read directly from database fields instead of calculating
-            if ($kol->status_recommendation === 'Worth it') {
-                $worthItCount++;
-            }
-            
-            if ($kol->cpm && $kol->cpm > 0) {
-                $totalCpm += $kol->cpm;
-                $validCpmCount++;
-            }
-        }
-        
-        $avgCpm = $validCpmCount > 0 ? $totalCpm / $validCpmCount : 0;
-        $worthItPercentage = $totalKol > 0 ? ($worthItCount / $totalKol) * 100 : 0;
-        
-        return response()->json([
-            'total_kol' => $totalKol,
-            'worth_it_count' => $worthItCount,
-            'worth_it_percentage' => round($worthItPercentage, 2),
-            'avg_cpm' => round($avgCpm, 2),
-            'total_followers' => $filteredKols->sum('followers')
-        ]);
+    public function getKpiData(Request $request)
+{
+    $query = KeyOpinionLeader::where('tenant_id', Auth::user()->current_tenant_id);
+
+    // Apply the same filters as getKOLDataTableQuery
+    if ($request->filled('niche')) {
+        $query->where('niche', $request->niche);
     }
+
+    if ($request->filled('status_recommendation')) {
+        $query->where('status_recommendation', $request->status_recommendation);
+    }
+
+    if ($request->filled('approve_status')) {
+        $approveValue = $request->approve_status;
+        if ($approveValue === 'approved') {
+            $query->where('approve', 1);
+        } elseif ($approveValue === 'declined') {
+            $query->where('approve', 0);
+        } elseif ($approveValue === 'pending') {
+            $query->whereNull('approve');
+        }
+    }
+
+    if ($request->filled('tier')) {
+        $tier = $request->tier;
+        switch ($tier) {
+            case 'Nano':
+                $query->whereBetween('followers', [1000, 9999]);
+                break;
+            case 'Micro':
+                $query->whereBetween('followers', [10000, 49999]);
+                break;
+            case 'Mid-Tier':
+                $query->whereBetween('followers', [50000, 249999]);
+                break;
+            case 'Macro':
+                $query->whereBetween('followers', [250000, 999999]);
+                break;
+            case 'Mega':
+                $query->where('followers', '>=', 1000000);
+                break;
+            case 'Unknown':
+                $query->where(function($q) {
+                    $q->where('followers', '<', 1000)
+                      ->orWhereNull('followers');
+                });
+                break;
+        }
+    }
+
+    $totalKol = $query->count();
+    $worthItCount = (clone $query)->where('status_recommendation', 'Worth it')->count();
+    $avgCpm = (clone $query)->whereNotNull('cpm')->avg('cpm');
+    $worthItPercentage = $totalKol > 0 ? round(($worthItCount / $totalKol) * 100, 1) : 0;
+
+    return response()->json([
+        'total_kol' => $totalKol,
+        'worth_it_count' => $worthItCount,
+        'avg_cpm' => round($avgCpm ?? 0),
+        'worth_it_percentage' => $worthItPercentage
+    ]);
+}
 
     /**
      * Fetch video statistics and update average views for a KOL (Test Route)
