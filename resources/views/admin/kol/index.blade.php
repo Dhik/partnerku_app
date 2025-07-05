@@ -166,7 +166,6 @@
             <th>Avg View</th>
             <th>CPM</th>
             <th>Status</th>
-            <th>Approval</th>
             <th>PIC Contact</th>
             <th>Refresh</th>
             <th>Approval Actions</th>
@@ -573,7 +572,6 @@ $(document).ready(function() {
             },
             { data: 'cpm_display', name: 'cpm', orderable: false },
             { data: 'status_recommendation_display', name: 'status_recommendation', orderable: false },
-            { data: 'approval_status', name: 'approve', orderable: false },
             { data: 'pic_contact_name', name: 'pic_contact_name' },
             { data: 'refresh_follower', name: 'refresh_follower', orderable: false, searchable: false },
             { data: 'approval_actions', name: 'approval_actions', orderable: false, searchable: false },
