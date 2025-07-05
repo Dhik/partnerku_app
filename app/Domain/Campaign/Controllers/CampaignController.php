@@ -205,9 +205,6 @@ class CampaignController extends Controller
 
         $worthyKols = DB::table('key_opinion_leaders')
             ->where('key_opinion_leaders.tenant_id', Auth::user()->current_tenant_id)
-            ->whereNotNull('key_opinion_leaders.username')
-            ->where('key_opinion_leaders.username', '!=', '')
-            ->whereNotNull('key_opinion_leaders.cpm')
             ->where('key_opinion_leaders.cpm', '<', $campaign->cpm)
             ->orderBy('key_opinion_leaders.username')
             ->get(['username', 'name', 'channel']);
