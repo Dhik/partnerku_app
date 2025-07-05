@@ -824,7 +824,6 @@ class KeyOpinionLeaderController extends Controller
     public function edit(KeyOpinionLeader $keyOpinionLeader): View|\Illuminate\Foundation\Application|Factory|Application
     {
         $this->authorize('updateKOL', KeyOpinionLeader::class);
-
         return view('admin.kol.edit', array_merge(['keyOpinionLeader' => $keyOpinionLeader], $this->getCommonData()));
     }
 
