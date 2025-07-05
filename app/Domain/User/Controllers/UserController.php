@@ -10,6 +10,7 @@ use App\Domain\User\Enums\PermissionEnum;
 use App\Domain\User\Requests\UserRequest;
 use App\Domain\User\Requests\UserUpdateRequest;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
