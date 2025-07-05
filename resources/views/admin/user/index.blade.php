@@ -88,9 +88,10 @@
                             response.message,
                             'success'
                         ).then(() => {
-                            // Auto refresh the page after success
                             window.location.reload();
                         });
+                        // Reload the DataTable
+                        $('#users-table').DataTable().ajax.reload();
                     },
                     error: function(xhr) {
                         Swal.fire(
