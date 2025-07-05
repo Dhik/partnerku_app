@@ -31,40 +31,45 @@ class UserController extends Controller
      * Get user list for datatables
      */
     public function get(): JsonResponse
-    {
-        $userQuery = $this->userBLL->getUserDataTable();
+{
+    $userQuery = $this->userBLL->getUserDataTable();
 
-        return DataTables::of($userQuery)
-            ->filter(function ($query) {
-                $searchParam = request()->search['value'];
+    return DataTables::of($userQuery)
+        ->filter(function ($query) {
+            $searchParam = request()->search['value'];
 
-                if (! empty($searchParam)) {
-                    $query->orWhereHas('roles', function ($query) use ($searchParam) {
-                        $query->where('name', 'like', '%'.$searchParam.'%');
-                    });
-                }
-            }, true)
-            ->addColumn('roles', function ($row) {
-                return $row->roles->pluck('name')->map(function ($value, $key) {
-                    return '<span class="badge bg-primary">'.$value.'</span>';
-                })->implode(' ');
-            })
-            ->addColumn('tenants', function ($row) {
-                return $row->tenants->pluck('name')->map(function ($value, $key) {
-                    return '<span class="badge bg-success">'.$value.'</span>';
-                })->implode(' ');
-            })
-            ->addColumn('actions',
-                '<a href="{{ URL::route( \'users.show\', array( $id )) }}" class="btn btn-primary btn-xs" >
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="{{ URL::route( \'users.edit\', array( $id )) }}" class="btn btn-success btn-xs" >
-                            <i class="fas fa-pencil-alt"></i>
-                        </a> '
-            )
-            ->rawColumns(['actions', 'roles', 'tenants'])
-            ->toJson();
-    }
+            if (! empty($searchParam)) {
+                $query->orWhereHas('roles', function ($query) use ($searchParam) {
+                    $query->where('name', 'like', '%'.$searchParam.'%');
+                });
+            }
+        }, true)
+        ->addColumn('roles', function ($row) {
+            return $row->roles->pluck('name')->map(function ($value, $key) {
+                return '<span class="badge bg-primary">'.$value.'</span>';
+            })->implode(' ');
+        })
+        ->addColumn('tenants', function ($row) {
+            return $row->tenants->pluck('name')->map(function ($value, $key) {
+                return '<span class="badge bg-success">'.$value.'</span>';
+            })->implode(' ');
+        })
+        ->addColumn('actions', function ($row) {
+            return '
+                <a href="' . route('users.show', $row->id) . '" class="btn btn-primary btn-xs" title="View">
+                    <i class="fas fa-eye"></i>
+                </a>
+                <a href="' . route('users.edit', $row->id) . '" class="btn btn-success btn-xs" title="Edit">
+                    <i class="fas fa-pencil-alt"></i>
+                </a>
+                <button type="button" class="btn btn-danger btn-xs delete-user" data-id="' . $row->id . '" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            ';
+        })
+        ->rawColumns(['actions', 'roles', 'tenants'])
+        ->toJson();
+}
 
     /**
      * Display a listing of the users.
