@@ -159,9 +159,9 @@
     <thead>
         <tr>
             <th>Username</th>
-            <th>Channel</th>
             <th>Niche</th>
             <th>Followers</th>
+            <th>Tier</th>
             <th>Price/Slot</th>
             <th>Avg View</th>
             <th>CPM</th>
