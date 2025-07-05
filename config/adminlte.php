@@ -338,22 +338,18 @@ return [
             'text' => 'Product',
             'url' => 'admin/product',
             'icon' => 'nav-icon far fa-circle text-info',
-            'can' => [PermissionEnum::ViewOtherSpent],
+            'can' => [PermissionEnum::CreateKOL],
         ],
         [
             'text' => 'Campaign Management',
-            'can' => [
-                PermissionEnum::ViewCampaign,
-                PermissionEnum::ViewKOL,
-                PermissionEnum::CreateKOL
-            ],
+            'can' => [PermissionEnum::CreateKOL],
             'icon' => 'fas fa-fw fa-bullhorn',
             'submenu' => [
                 [
                     'text' => 'Campaigns',
                     'url' => 'admin/campaign',
                     'icon' => 'nav-icon far fa-circle',
-                    'can' => [PermissionEnum::ViewCampaign],
+                    'can' => [PermissionEnum::CreateKOL],
                     'active' => ['admin/campaign*']
                 ],
                 [

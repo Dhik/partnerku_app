@@ -42,7 +42,7 @@ class CampaignController extends Controller
      */
     public function get(Request $request): JsonResponse
     {
-        $this->authorize('viewCampaign', Campaign::class);
+        // $this->authorize('viewCampaign', Campaign::class);
 
         $query = $this->campaignBLL->getCampaignDataTable($request);
 
@@ -162,8 +162,7 @@ class CampaignController extends Controller
      */
     public function index(): View|\Illuminate\Foundation\Application|Factory|Application
     {
-        $this->authorize('viewCampaign', Campaign::class);
-
+        // $this->authorize('viewCampaign', Campaign::class);
         return view('admin.campaign.index');
     }
 
@@ -172,7 +171,7 @@ class CampaignController extends Controller
      */
     public function create(): View|\Illuminate\Foundation\Application|Factory|Application
     {
-        $this->authorize('createCampaign', Campaign::class);
+        // $this->authorize('createCampaign', Campaign::class);
         return view('admin.campaign.create');
     }
 
@@ -181,7 +180,7 @@ class CampaignController extends Controller
      */
     public function store(CampaignRequest $request): RedirectResponse
     {
-        $this->authorize('createCampaign', Campaign::class);
+        // $this->authorize('createCampaign', Campaign::class);
 
         $campaign = $this->campaignBLL->storeCampaign($request);
 

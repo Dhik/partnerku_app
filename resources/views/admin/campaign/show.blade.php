@@ -65,12 +65,12 @@
 
                     {{-- Action Buttons --}}
                     <div class="row mb-3">
+                        @hasanyrole(\App\Domain\User\Enums\RoleEnum::SuperAdmin . '|' . \App\Domain\User\Enums\RoleEnum::Client1 . '|' . \App\Domain\User\Enums\RoleEnum::TimInternal . '|' . \App\Domain\User\Enums\RoleEnum::TimAds)
                         <div class="col-auto">
-                            @can('UpdateCampaign', $campaign)
                                 <button class="btn btn-primary" data-toggle="modal" data-target="#contentModal">
                                     <i class="fas fa-plus"></i> Add Content
                                 </button>
-                            @endcan
+                            
                         </div>
                         <div class="col-auto">
                             <button id="refreshAllBtn" class="btn btn-success">
@@ -82,6 +82,7 @@
                                 <i class="fas fa-file-download"></i> Export
                             </a>
                         </div>
+                        @endhasanyrole
                     </div>
 
                     {{-- KPI Cards --}}

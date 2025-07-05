@@ -60,7 +60,7 @@ class StatisticController extends Controller
      */
     public function refresh(CampaignContent $campaignContent): JsonResponse
     {
-        $this->authorize('updateCampaignContent', CampaignContent::class);
+        // $this->authorize('updateCampaignContent', CampaignContent::class);
 
         try {
             if (empty($campaignContent->link)) {
@@ -115,7 +115,7 @@ class StatisticController extends Controller
      */
     public function bulkRefresh(Campaign $campaign): JsonResponse
     {
-        $this->authorize('viewCampaignContent', CampaignContent::class);
+        // $this->authorize('viewCampaignContent', CampaignContent::class);
 
         try {
             $campaignContents = $campaign->campaignContents()
@@ -211,7 +211,7 @@ class StatisticController extends Controller
      */
     public function card(int $campaignId, Request $request): JsonResponse
     {
-        $this->authorize('viewCampaignContent', CampaignContent::class);
+        // $this->authorize('viewCampaignContent', CampaignContent::class);
         
         try {
             $data = $this->cardService->card($campaignId, $request);
@@ -230,7 +230,7 @@ class StatisticController extends Controller
      */
     public function chart(int $campaignId, Request $request): JsonResponse
     {
-        $this->authorize('viewCampaignContent', CampaignContent::class);
+        // $this->authorize('viewCampaignContent', CampaignContent::class);
         
         try {
             $data = $this->statisticBLL->getChartDataCampaign($campaignId, $request);

@@ -19,17 +19,15 @@
                 <div class="filter-controls">
                     <div class="row">
                         <div class="col-auto">
-                            @can(\App\Domain\User\Enums\PermissionEnum::CreateCampaign)
+                            @hasanyrole(\App\Domain\User\Enums\RoleEnum::SuperAdmin . '|' . \App\Domain\User\Enums\RoleEnum::Client1 . '|' . \App\Domain\User\Enums\RoleEnum::TimInternal . '|' . \App\Domain\User\Enums\RoleEnum::TimAds)
                                 <a href="{{ route('campaign.create') }}" class="btn btn-primary">
                                     <i class="fas fa-plus"></i> {{ trans('labels.add') }}
                                 </a>
-                            @endcan
-                            
-                            @can(\App\Domain\User\Enums\PermissionEnum::UpdateCampaign)
+                                
                                 <button id="bulkRefreshBtn" type="button" class="btn btn-success">
                                     <i class="fas fa-sync-alt"></i> {{ trans('labels.bulk_refresh') }}
                                 </button>
-                            @endcan
+                            @endhasanyrole
                         </div>
                         <div class="col-auto">
                             <input type="month" class="form-control" id="filterMonth" autocomplete="off">
