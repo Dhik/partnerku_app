@@ -111,17 +111,17 @@ class CampaignBLL extends BaseBLL implements CampaignBLLInterface
      */
     public function deleteCampaign(Campaign $campaign): bool
     {
-        $checkOffer = $this->campaignDAL->checkOffer($campaign);
+        // $checkOffer = $this->campaignDAL->checkOffer($campaign);
 
-        if (! empty($checkOffer)) {
-            return false;
-        }
+        // if (! empty($checkOffer)) {
+        //     return false;
+        // }
 
-        $checkCampaignContent = $this->campaignDAL->checkCampaignContent($campaign);
+        // $checkCampaignContent = $this->campaignDAL->checkCampaignContent($campaign);
 
-        if (! empty($checkCampaignContent)) {
-            return false;
-        }
+        // if (! empty($checkCampaignContent)) {
+        //     return false;
+        // }
 
         $this->campaignDAL->deleteCampaign($campaign);
 
