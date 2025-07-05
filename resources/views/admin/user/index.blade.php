@@ -87,9 +87,10 @@
                             'Deleted!',
                             response.message,
                             'success'
-                        );
-                        // Reload the DataTable
-                        $('#users-table').DataTable().ajax.reload();
+                        ).then(() => {
+                            // Auto refresh the page after success
+                            window.location.reload();
+                        });
                     },
                     error: function(xhr) {
                         Swal.fire(
