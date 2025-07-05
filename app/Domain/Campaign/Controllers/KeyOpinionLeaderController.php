@@ -117,113 +117,187 @@ class KeyOpinionLeaderController extends Controller
     /**
      * @throws Exception
      */
-    public function get(Request $request): JsonResponse
-    {
-        $this->authorize('viewKOL', KeyOpinionLeader::class);
-
-        $query = $this->getKOLDataTableQuery($request);
-
-        return DataTables::of($query)
-            ->addColumn('pic_contact_name', function ($row) {
-                return $row->picContact->name ?? 'empty';
-            })
-            ->addColumn('actions', function ($row) {
-                $user = Auth::user();
-                $actions = '';
-                
-                // WhatsApp button
-                if (!empty($row->phone_number)) {
-                    $phoneNumber = preg_replace('/[^0-9]/', '', $row->phone_number);
-                    if (substr($phoneNumber, 0, 1) === '0') {
-                        $phoneNumber = '62' . substr($phoneNumber, 1);
-                    }
-                    $waLink = 'https://wa.me/' . $phoneNumber;
-                    
-                    $actions .= '<a href="' . $waLink . '" class="btn btn-success btn-xs" target="_blank" title="WhatsApp">
-                                    <i class="fab fa-whatsapp"></i>
-                                </a> ';
-                }
-                
-                // View button - all roles can view
-                $actions .= '<a href="' . route('kol.show', $row->id) . '" class="btn btn-info btn-xs" title="View">
-                                <i class="fas fa-eye"></i>
-                            </a> ';
-                
-                // Edit button - Admin, Client1, TimAds can edit (TimInternal cannot edit)
-                if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('updateKOL', KeyOpinionLeader::class)) {
-                    $actions .= '<button onclick="openEditModal(' . $row->id . ')" class="btn btn-primary btn-xs" title="Edit">
-                                    <i class="fas fa-pencil-alt"></i>
-                                </button> ';
-                }
-                
-                // Delete button - Admin, Client1, TimAds only (TimInternal cannot delete)
-                if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('deleteKOL', KeyOpinionLeader::class)) {
-                    $actions .= '<button onclick="deleteKol(' . $row->id . ')" class="btn btn-danger btn-xs" title="Delete">
-                                    <i class="fas fa-trash"></i>
-                                </button>';
-                }
-                
-                return $actions;
-            })
-            ->addColumn('refresh_follower', function ($row) {
-                return '<button class="btn btn-info btn-xs refresh-follower" data-id="' . $row->username . '">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>';
-            })
-            ->addColumn('engagement_rate_display', function ($row) {
-                return $row->engagement_rate ? number_format($row->engagement_rate, 2) . '%' : '-';
-            })
-            ->addColumn('cpm_display', function ($row) {
-                return $row->cpm ? number_format($row->cpm, 0, ',', '.') : '-';
-            })
-            ->addColumn('status_recommendation_display', function ($row) {
-                if (!$row->status_recommendation) {
-                    return '<span class="badge badge-secondary">-</span>';
-                }
-                $badgeClass = $row->status_recommendation === 'Worth it' ? 'badge-success' : 'badge-danger';
-                return '<span class="badge ' . $badgeClass . '">' . $row->status_recommendation . '</span>';
-            })
-            ->addColumn('tier_display', function ($row) {
-                $followers = $row->followers ?: 0;
-                
-                if ($followers >= 1000 && $followers < 10000) {
-                    $tier = 'Nano';
-                    $badgeClass = 'badge-info';
-                } elseif ($followers >= 10000 && $followers < 50000) {
-                    $tier = 'Micro';
-                    $badgeClass = 'badge-purple';
-                } elseif ($followers >= 50000 && $followers < 250000) {
-                    $tier = 'Mid-Tier';
-                    $badgeClass = 'badge-warning';
-                } elseif ($followers >= 250000 && $followers < 1000000) {
-                    $tier = 'Macro';
-                    $badgeClass = 'badge-success';
-                } elseif ($followers >= 1000000) {
-                    $tier = 'Mega';
-                    $badgeClass = 'badge-danger';
-                } else {
-                    $tier = 'Unknown';
-                    $badgeClass = 'badge-secondary';
-                }
-                
-                return '<span class="badge ' . $badgeClass . '">' . $tier . '</span>';
-            })
-            ->editColumn('rate', function ($row) {
-                return number_format($row->rate, 0, ',', '.');
-            })
-            ->editColumn('followers', function ($row) {
-                return number_format($row->followers, 0, ',', '.');
-            })
-            ->rawColumns([
-                'actions', 
-                'refresh_follower', 
-                'cpm_display',
-                'status_recommendation_display',
-                'tier_display'
-            ])
-            ->toJson();
+    public function updateApprovalStatus(Request $request, KeyOpinionLeader $keyOpinionLeader)
+{
+    $this->authorize('updateKOL', KeyOpinionLeader::class);
+    
+    $request->validate([
+        'approve' => 'required|boolean'
+    ]);
+    
+    try {
+        $keyOpinionLeader->approve = $request->approve;
+        $keyOpinionLeader->save();
+        
+        $status = $request->approve ? 'approved' : 'declined';
+        
+        return response()->json([
+            'success' => true,
+            'message' => "KOL @{$keyOpinionLeader->username} has been {$status} successfully",
+            'status' => $status,
+            'approve' => $keyOpinionLeader->approve
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update approval status: ' . $e->getMessage()
+        ], 500);
     }
+}
+// 3. Update your get() method to include the approval status column
+public function get(Request $request): JsonResponse
+{
+    $this->authorize('viewKOL', KeyOpinionLeader::class);
 
+    $query = $this->getKOLDataTableQuery($request);
+
+    return DataTables::of($query)
+        ->addColumn('pic_contact_name', function ($row) {
+            return $row->picContact->name ?? 'empty';
+        })
+        ->addColumn('approval_status', function ($row) {
+            if ($row->approve === 1) {
+                return '<span class="badge badge-success">
+                            <i class="fas fa-check"></i> Approved
+                        </span>';
+            } elseif ($row->approve === 0) {
+                return '<span class="badge badge-danger">
+                            <i class="fas fa-times"></i> Declined
+                        </span>';
+            } else {
+                return '<span class="badge badge-warning">
+                            <i class="fas fa-clock"></i> Pending
+                        </span>';
+            }
+        })
+        ->addColumn('approval_actions', function ($row) {
+            $user = Auth::user();
+            
+            // Only allow users with update permission to approve/decline
+            if (!$user->can('updateKOL', KeyOpinionLeader::class)) {
+                return '<span class="text-muted">No permission</span>';
+            }
+            
+            $actions = '';
+            
+            // Show approve button if not approved
+            if ($row->approve !== 1) {
+                $actions .= '<button onclick="updateApprovalStatus(' . $row->id . ', true)" 
+                                class="btn btn-success btn-xs mr-1" 
+                                title="Approve KOL">
+                                <i class="fas fa-check"></i> Approve
+                            </button>';
+            }
+            
+            // Show decline button if not declined
+            if ($row->approve !== 0) {
+                $actions .= '<button onclick="updateApprovalStatus(' . $row->id . ', false)" 
+                                class="btn btn-danger btn-xs" 
+                                title="Decline KOL">
+                                <i class="fas fa-times"></i> Decline
+                            </button>';
+            }
+            
+            return $actions ?: '<span class="text-muted">-</span>';
+        })
+        ->addColumn('actions', function ($row) {
+            $user = Auth::user();
+            $actions = '';
+            
+            // WhatsApp button
+            if (!empty($row->phone_number)) {
+                $phoneNumber = preg_replace('/[^0-9]/', '', $row->phone_number);
+                if (substr($phoneNumber, 0, 1) === '0') {
+                    $phoneNumber = '62' . substr($phoneNumber, 1);
+                }
+                $waLink = 'https://wa.me/' . $phoneNumber;
+                
+                $actions .= '<a href="' . $waLink . '" class="btn btn-success btn-xs" target="_blank" title="WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                            </a> ';
+            }
+            
+            // View button - all roles can view
+            $actions .= '<a href="' . route('kol.show', $row->id) . '" class="btn btn-info btn-xs" title="View">
+                            <i class="fas fa-eye"></i>
+                        </a> ';
+            
+            // Edit button - Admin, Client1, TimAds can edit (TimInternal cannot edit)
+            if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('updateKOL', KeyOpinionLeader::class)) {
+                $actions .= '<button onclick="openEditModal(' . $row->id . ')" class="btn btn-primary btn-xs" title="Edit">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button> ';
+            }
+            
+            // Delete button - Admin, Client1, TimAds only (TimInternal cannot delete)
+            if ($user->hasAnyRole(['superadmin', 'client_1', 'tim_ads']) && $user->can('deleteKOL', KeyOpinionLeader::class)) {
+                $actions .= '<button onclick="deleteKol(' . $row->id . ')" class="btn btn-danger btn-xs" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>';
+            }
+            
+            return $actions;
+        })
+        ->addColumn('refresh_follower', function ($row) {
+            return '<button class="btn btn-info btn-xs refresh-follower" data-id="' . $row->username . '">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>';
+        })
+        ->addColumn('engagement_rate_display', function ($row) {
+            return $row->engagement_rate ? number_format($row->engagement_rate, 2) . '%' : '-';
+        })
+        ->addColumn('cpm_display', function ($row) {
+            return $row->cpm ? number_format($row->cpm, 0, ',', '.') : '-';
+        })
+        ->addColumn('status_recommendation_display', function ($row) {
+            if (!$row->status_recommendation) {
+                return '<span class="badge badge-secondary">-</span>';
+            }
+            $badgeClass = $row->status_recommendation === 'Worth it' ? 'badge-success' : 'badge-danger';
+            return '<span class="badge ' . $badgeClass . '">' . $row->status_recommendation . '</span>';
+        })
+        ->addColumn('tier_display', function ($row) {
+            $followers = $row->followers ?: 0;
+            
+            if ($followers >= 1000 && $followers < 10000) {
+                $tier = 'Nano';
+                $badgeClass = 'badge-info';
+            } elseif ($followers >= 10000 && $followers < 50000) {
+                $tier = 'Micro';
+                $badgeClass = 'badge-purple';
+            } elseif ($followers >= 50000 && $followers < 250000) {
+                $tier = 'Mid-Tier';
+                $badgeClass = 'badge-warning';
+            } elseif ($followers >= 250000 && $followers < 1000000) {
+                $tier = 'Macro';
+                $badgeClass = 'badge-success';
+            } elseif ($followers >= 1000000) {
+                $tier = 'Mega';
+                $badgeClass = 'badge-danger';
+            } else {
+                $tier = 'Unknown';
+                $badgeClass = 'badge-secondary';
+            }
+            
+            return '<span class="badge ' . $badgeClass . '">' . $tier . '</span>';
+        })
+        ->editColumn('rate', function ($row) {
+            return number_format($row->rate, 0, ',', '.');
+        })
+        ->editColumn('followers', function ($row) {
+            return number_format($row->followers, 0, ',', '.');
+        })
+        ->rawColumns([
+            'actions', 
+            'refresh_follower', 
+            'cpm_display',
+            'status_recommendation_display',
+            'tier_display',
+            'approval_status',
+            'approval_actions'
+        ])
+        ->toJson();
+}
     public function getKpiData(Request $request): JsonResponse
     {
         $this->authorize('viewKOL', KeyOpinionLeader::class);

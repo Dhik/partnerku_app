@@ -39,6 +39,7 @@ class KeyOpinionLeader extends Model
         'video_10_links',
         'following',
         'followers',
+        'approve',
     ];
 
     protected $casts = [

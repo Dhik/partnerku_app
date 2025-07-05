@@ -173,22 +173,24 @@
                 </div>
                 <div class="card-body">
                     <table id="kol-table" class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th>Username</th>
-                                <th>Channel</th>
-                                <th>Niche</th>
-                                <th>Followers</th>
-                                <th>Price/Slot</th>
-                                <th>Avg View</th>
-                                <th>CPM</th>
-                                <th>Status</th>
-                                <th>PIC Contact</th>
-                                <th>Refresh</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                    </table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Channel</th>
+            <th>Niche</th>
+            <th>Followers</th>
+            <th>Price/Slot</th>
+            <th>Avg View</th>
+            <th>CPM</th>
+            <th>Status</th>
+            <th>Approval</th>
+            <th>PIC Contact</th>
+            <th>Refresh</th>
+            <th>Approval Actions</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+</table>
                 </div>
             </div>
         </div>
@@ -563,7 +565,6 @@ $(document).ready(function() {
                 name: 'price_per_slot',
                 render: function(data, type, row) {
                     if (type === 'display' && data != null) {
-                        // Format number with thousand separators and add Rp. prefix
                         return 'Rp. ' + new Intl.NumberFormat('id-ID').format(data);
                     }
                     return data;
@@ -574,7 +575,6 @@ $(document).ready(function() {
                 name: 'average_view',
                 render: function(data, type, row) {
                     if (type === 'display' && data != null) {
-                        // Format number with thousand separators
                         return new Intl.NumberFormat('id-ID').format(data);
                     }
                     return data;
@@ -582,14 +582,112 @@ $(document).ready(function() {
             },
             { data: 'cpm_display', name: 'cpm', orderable: false },
             { data: 'status_recommendation_display', name: 'status_recommendation', orderable: false },
+            { data: 'approval_status', name: 'approve', orderable: false },
             { data: 'pic_contact_name', name: 'pic_contact_name' },
             { data: 'refresh_follower', name: 'refresh_follower', orderable: false, searchable: false },
+            { data: 'approval_actions', name: 'approval_actions', orderable: false, searchable: false },
             { data: 'actions', name: 'actions', orderable: false, searchable: false }
         ],
         order: [[0, 'asc']],
         pageLength: 25,
         responsive: true
     });
+
+    // Add the approval function
+    window.updateApprovalStatus = function(kolId, approve) {
+        const action = approve ? 'approve' : 'decline';
+        const actionText = approve ? 'Approve' : 'Decline';
+        const actionColor = approve ? '#28a745' : '#dc3545';
+        const iconClass = approve ? 'fa-check' : 'fa-times';
+        
+        Swal.fire({
+            title: `${actionText} KOL?`,
+            html: `
+                <div class="text-center">
+                    <i class="fas ${iconClass} fa-3x mb-3" style="color: ${actionColor}"></i>
+                    <p>Are you sure you want to <strong>${action}</strong> this Key Opinion Leader?</p>
+                    <small class="text-muted">This will update the approval status for this KOL.</small>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: actionColor,
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: `Yes, ${actionText}!`,
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading state
+                Swal.fire({
+                    title: `${actionText}ing KOL...`,
+                    html: `
+                        <div class="text-center">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="sr-only">Loading...</span>
+                            </div>
+                            <p>Please wait while we update the approval status.</p>
+                        </div>
+                    `,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false
+                });
+
+                // Make the AJAX request
+                $.ajax({
+                    url: '{{ route("kol.updateApproval", ":id") }}'.replace(':id', kolId),
+                    method: 'PUT',
+                    data: {
+                        approve: approve ? 1 : 0,
+                        _token: $('meta[name="csrf-token"]').attr('content')
+                    }
+                })
+                .done(function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: response.message,
+                            icon: 'success',
+                            confirmButtonColor: '#28a745',
+                            timer: 3000,
+                            timerProgressBar: true
+                        });
+                        
+                        // Reload the table to reflect changes
+                        kolTable.ajax.reload(null, false);
+                        loadKpiData();
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || `Failed to ${action} KOL`,
+                            icon: 'error',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                })
+                .fail(function(xhr) {
+                    const response = xhr.responseJSON;
+                    let errorMessage = `Failed to ${action} KOL`;
+                    
+                    if (response) {
+                        if (response.message) {
+                            errorMessage = response.message;
+                        } else if (response.errors) {
+                            errorMessage = Object.values(response.errors).flat().join(', ');
+                        }
+                    }
+                    
+                    Swal.fire({
+                        title: 'Error!',
+                        text: errorMessage,
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                });
+            }
+        });
+    };
 
     // Load KPI data
     function loadKpiData() {
