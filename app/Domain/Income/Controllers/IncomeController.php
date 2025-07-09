@@ -11,6 +11,7 @@ use Yajra\DataTables\DataTables;
 use Illuminate\Http\JsonResponse;
 use App\Domain\User\Models\User;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 /**
  * @property IncomeBLLInterface incomeBLL
@@ -80,6 +81,9 @@ class IncomeController extends Controller
                             </button>
                         </div>
                     ';
+                })
+                ->editColumn('date', function ($income) {
+                    return $income->date ? Carbon::parse($income->date)->format('d-m-Y') : '-';
                 })
                 ->editColumn('revenue_contract', function ($income) {
                     return 'Rp ' . number_format($income->revenue_contract, 0, ',', '.');

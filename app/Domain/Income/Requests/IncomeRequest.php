@@ -27,6 +27,7 @@ class IncomeRequest extends FormRequest
     {
         return [
             'nama_client' => 'required|string|max:255',
+            'date' => 'required|date',
             'revenue_contract' => 'required|numeric|min:0',
             'service' => 'required|string|max:255',
             'team_in_charge' => 'required'  // We'll validate this in the custom validation method
@@ -132,6 +133,9 @@ class IncomeRequest extends FormRequest
             'nama_client.string' => 'Client name must be a string',
             'nama_client.max' => 'Client name must not exceed 255 characters',
             
+            'date.required' => 'Date is required',
+            'date.date' => 'Date must be a valid date',
+            
             'revenue_contract.required' => 'Revenue contract is required',
             'revenue_contract.numeric' => 'Revenue contract must be a number',
             'revenue_contract.min' => 'Revenue contract must be at least 0',
@@ -151,6 +155,7 @@ class IncomeRequest extends FormRequest
     {
         return [
             'nama_client' => 'client name',
+            'date' => 'date',
             'revenue_contract' => 'revenue contract',
             'service' => 'service',
             'team_in_charge' => 'team members'

@@ -24,6 +24,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Client Name</th>
+                            <th>Date</th>
                             <th>Revenue Contract</th>
                             <th>Service</th>
                             <th>Team In Charge</th>
@@ -52,6 +53,10 @@
                     <div class="form-group">
                         <label for="nama_client">Client Name</label>
                         <input type="text" class="form-control" id="nama_client" name="nama_client" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="date">Date</label>
+                        <input type="date" class="form-control" id="date" name="date" required>
                     </div>
                     <div class="form-group">
                         <label for="revenue_contract">Revenue Contract</label>
@@ -95,16 +100,22 @@
                         <p id="show_nama_client"></p>
                     </div>
                     <div class="col-md-6">
-                        <strong>Revenue Contract:</strong>
-                        <p id="show_revenue_contract"></p>
+                        <strong>Date:</strong>
+                        <p id="show_date"></p>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-6">
+                        <strong>Revenue Contract:</strong>
+                        <p id="show_revenue_contract"></p>
+                    </div>
+                    <div class="col-md-6">
                         <strong>Service:</strong>
                         <p id="show_service"></p>
                     </div>
-                    <div class="col-md-6">
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
                         <strong>Team In Charge:</strong>
                         <p id="show_team_in_charge"></p>
                     </div>
@@ -573,6 +584,7 @@ $(document).ready(function() {
         columns: [
             {data: 'id', name: 'id'},
             {data: 'nama_client', name: 'nama_client'},
+            {data: 'date', name: 'date'},
             {data: 'revenue_contract', name: 'revenue_contract'},
             {data: 'service', name: 'service'},
             {data: 'team_in_charge', name: 'team_in_charge'},
@@ -600,6 +612,7 @@ $(document).ready(function() {
         // Get form data as object
         let formData = {
             'nama_client': $('#nama_client').val(),
+            'date': $('#date').val(),
             'revenue_contract': $('#revenue_contract').val(),
             'service': $('#service').val(),
             'team_in_charge': selectedTeam, // This will be an array
@@ -712,6 +725,7 @@ function editIncome(id) {
                 let data = response.data;
                 $('#incomeId').val(data.id);
                 $('#nama_client').val(data.nama_client);
+                $('#date').val(data.date);
                 $('#revenue_contract').val(data.revenue_contract);
                 $('#service').val(data.service);
                 
@@ -742,6 +756,7 @@ function showIncome(id) {
             if (response.success) {
                 let data = response.data;
                 $('#show_nama_client').text(data.nama_client);
+                $('#show_date').text(data.date ? new Date(data.date).toLocaleDateString('id-ID') : '-');
                 $('#show_revenue_contract').text('Rp ' + new Intl.NumberFormat('id-ID').format(data.revenue_contract));
                 $('#show_service').text(data.service);
                 
