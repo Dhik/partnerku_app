@@ -18,8 +18,8 @@ enum RoleEnum: string
     {
         return match ($value) {
             self::SuperAdmin => 'SuperAdmin',
-            self::Client1 => 'Client 1',
-            self::Client2 => 'Client 2',
+            self::Client1 => 'Client User',
+            self::Client2 => 'Client Viewers',
             self::TimInternal => 'Tim Internal',
             self::TimAds => 'Tim Ads',
             default => 'Unknown'
