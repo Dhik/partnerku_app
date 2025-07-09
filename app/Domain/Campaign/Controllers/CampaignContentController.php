@@ -372,7 +372,7 @@ public function update(CampaignContent $campaignContent, Request $request): Json
     $product = $request->input('product');
 
     if (empty($channel)) {
-        return response()->json(['message' => 'Channel is required'], 422);
+        $channel = "tiktok_video";
     }
 
     try {
