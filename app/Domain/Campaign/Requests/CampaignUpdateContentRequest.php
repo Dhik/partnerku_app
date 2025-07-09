@@ -15,7 +15,7 @@ class CampaignUpdateContentRequest extends FormRequest
             'task_name' => ['sometimes', 'required', 'string', 'max:255'],
             'link' => ['nullable', 'url'],
             'product' => ['sometimes', 'required', 'string', 'max:255'],
-            'channel' => ['sometimes', 'string', 'max:255'],
+            'channel' => ['sometimes', 'required', Rule::in(CampaignContentEnum::PlatformValidation)],
             'boost_code' => ['nullable', 'string'],
             'kode_ads' => ['nullable', 'string', 'max:255'],
             'views' => ['nullable', 'integer', 'min:0'],

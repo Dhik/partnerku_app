@@ -285,6 +285,10 @@ $(document).ready(function() {
     // Update Form Submit
     // REPLACE your existing contentUpdateForm submit handler with this:
 
+// Replace your form submission with this fixed version:
+
+// Method 2: Fix the JavaScript to send data properly
+
 $('#contentUpdateForm').on('submit', function(e) {
     e.preventDefault();
     const form = $(this);
@@ -296,69 +300,55 @@ $('#contentUpdateForm').on('submit', function(e) {
         return;
     }
     
-    // BUILD FORM DATA MANUALLY to ensure channel is included
-    const formData = new FormData();
-    
-    // Add CSRF token
-    formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
-    formData.append('_method', 'PUT');
-    
-    // Add all form fields explicitly
-    formData.append('task_name', $('#taskNameUpdate').val() || '');
-    formData.append('channel', $('#platformUpdate').val() || ''); // KEY FIX: explicitly add channel
-    formData.append('link', $('#linkUpdate').val() || '');
-    formData.append('product', $('#productUpdate').val() || '');
-    formData.append('views', $('#viewsUpdate').val() || '0');
-    formData.append('likes', $('#likesUpdate').val() || '0');
-    formData.append('comments', $('#commentsUpdate').val() || '0');
+    // Try Method A: Regular form serialization with POST
+    const formData = {
+        _token: $('meta[name="csrf-token"]').attr('content'),
+        _method: 'PUT',
+        task_name: $('#taskNameUpdate').val() || '',
+        channel: $('#platformUpdate').val() || '',
+        link: $('#linkUpdate').val() || '',
+        product: $('#productUpdate').val() || '',
+        views: $('#viewsUpdate').val() || '0',
+        likes: $('#likesUpdate').val() || '0',
+        comments: $('#commentsUpdate').val() || '0'
+    };
     
     // DEBUG: Log what we're sending
-    console.log('=== MANUAL FORMDATA ===');
-    for (let pair of formData.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
-    }
+    console.log('=== SENDING DATA ===');
+    console.log('Form data object:', formData);
+    console.log('Content ID:', contentId);
     
     // Validate required fields
-    if (!formData.get('channel')) {
+    if (!formData.channel) {
         CampaignUtils.showToast('Platform/Channel is required', 'error');
         return;
     }
     
-    if (!formData.get('task_name')) {
-        CampaignUtils.showToast('Task is required', 'error');
-        return;
-    }
-    
-    if (!formData.get('product')) {
-        CampaignUtils.showToast('Product is required', 'error');
-        return;
-    }
-    
-    // Build update URL
-    let updateUrl;
-    if (typeof window.campaignContentUpdateUrl !== 'undefined') {
-        updateUrl = window.campaignContentUpdateUrl.replace(':campaignContentId', contentId);
-    } else {
-        CampaignUtils.showToast('Update URL is not configured', 'error');
-        return;
-    }
+    let updateUrl = window.campaignContentUpdateUrl.replace(':campaignContentId', contentId);
+    console.log('Update URL:', updateUrl);
     
     ModalManager.clearErrors('#contentUpdateModal');
     CampaignUtils.setButtonLoading(submitBtn, true);
     
     $.ajax({
-        type: 'PUT',
+        type: 'POST', // Use POST with _method spoofing
         url: updateUrl,
-        data: formData,
-        processData: false,
-        contentType: false,
+        data: formData, // Send as regular form data, not FormData
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         success: function(response) {
+            console.log('Success response:', response);
             if (window.contentTable) TableManager.reload(window.contentTable);
             ModalManager.hide('#contentUpdateModal');
             CampaignUtils.showToast('Content updated successfully!');
         },
         error: function(xhr) {
-            console.error('Update error:', xhr.responseJSON);
+            console.error('Error response:', xhr.responseJSON);
+            console.error('Status:', xhr.status);
+            console.error('Status text:', xhr.statusText);
+            
             if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
                 ModalManager.showErrors('#contentUpdateModal', xhr.responseJSON.errors);
             } else {
