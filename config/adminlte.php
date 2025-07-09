@@ -308,31 +308,42 @@ return [
                 PermissionEnum::ViewCampaign,
             ],
         ],
-        
-        // Financial Management (SuperAdmin only)
         [
-            'text' => 'Income',
-            'url' => 'admin/income',
-            'icon' => 'nav-icon far fa-circle text-info',
-            'can' => [PermissionEnum::ViewIncome],
+            'text' => 'Cashflow Check',
+            'can' => [PermissionEnum::CreateKOL],
+            'icon' => 'fas fa-fw fa-coins',
+            'submenu' => [
+                [
+                    'text' => 'Income',
+                    'url' => 'admin/income',
+                    'icon' => 'nav-icon far fa-circle text-info',
+                    'can' => [PermissionEnum::ViewIncome],
+                ],
+                [
+                    'text' => 'Payroll',
+                    'url' => 'admin/payroll',
+                    'icon' => 'nav-icon far fa-circle text-info',
+                    'can' => [PermissionEnum::ViewPayroll],
+                ],
+                [
+                    'text' => 'Expenses',
+                    'url' => 'admin/other_spent',
+                    'icon' => 'nav-icon far fa-circle text-info',
+                    'can' => [PermissionEnum::ViewOtherSpent],
+                ],
+                // [
+                //     'text' => 'Cashflow Advice',
+                //     'url' => 'admin/other_spent',
+                //     'icon' => 'nav-icon far fa-circle text-info',
+                //     'can' => [PermissionEnum::ViewOtherSpent],
+                // ],
+            ]
         ],
         [
             'text' => 'Niche',
             'url' => 'admin/niche',
             'icon' => 'nav-icon far fa-circle text-info',
             'can' => [PermissionEnum::ViewIncome], // Add appropriate permission
-        ],
-        [
-            'text' => 'Payroll',
-            'url' => 'admin/payroll',
-            'icon' => 'nav-icon far fa-circle text-info',
-            'can' => [PermissionEnum::ViewPayroll],
-        ],
-        [
-            'text' => 'Other Spent',
-            'url' => 'admin/other_spent',
-            'icon' => 'nav-icon far fa-circle text-info',
-            'can' => [PermissionEnum::ViewOtherSpent],
         ],
         [
             'text' => 'Campaign Management',

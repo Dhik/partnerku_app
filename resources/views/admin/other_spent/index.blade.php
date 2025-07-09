@@ -1,10 +1,10 @@
 {{-- Other Spent View (admin/other_spent/index.blade.php) --}}
 @extends('adminlte::page')
 
-@section('title', 'Other Spent Management')
+@section('title', 'Expenses Management')
 
 @section('content_header')
-    <h1>Other Spent Management</h1>
+    <h1>Expenses Management</h1>
 @stop
 
 @section('content')
@@ -12,10 +12,10 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Other Spent Data</h3>
+                <h3 class="card-title">Expenses Data</h3>
                 <div class="card-tools">
                     <button type="button" class="btn btn-primary" onclick="createOtherSpent()">
-                        <i class="fas fa-plus"></i> Add New Other Spent
+                        <i class="fas fa-plus"></i> Add New Expenses
                     </button>
                 </div>
             </div>
