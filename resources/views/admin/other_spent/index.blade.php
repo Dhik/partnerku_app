@@ -27,6 +27,7 @@
                             <th>Date</th>
                             <th>Detail</th>
                             <th>Amount</th>
+                            <th>Type</th>
                             <th>Evidence Link</th>
                             <th>Actions</th>
                         </tr>
@@ -61,6 +62,18 @@
                     <div class="form-group">
                         <label for="amount">Amount</label>
                         <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="type">Type</label>
+                        <select class="form-control" id="type" name="type">
+                            <option value="">Select Type</option>
+                            <option value="Sales Marketing">Sales Marketing</option>
+                            <option value="Utilities">Utilities</option>
+                            <option value="Admin and General">Admin and General</option>
+                            <option value="Learning and Development">Learning and Development</option>
+                            <option value="THR">THR</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="evidence_link">Evidence Link</label>
@@ -98,15 +111,19 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-md-12">
-                        <strong>Detail:</strong>
-                        <p id="show_detail"></p>
+                    <div class="col-md-6">
+                        <strong>Type:</strong>
+                        <p id="show_type"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Evidence Link:</strong>
+                        <p><a id="show_evidence_link" href="#" target="_blank">View Evidence</a></p>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-12">
-                        <strong>Evidence Link:</strong>
-                        <p><a id="show_evidence_link" href="#" target="_blank">View Evidence</a></p>
+                        <strong>Detail:</strong>
+                        <p id="show_detail"></p>
                     </div>
                 </div>
             </div>
@@ -139,6 +156,7 @@ $(document).ready(function() {
             {data: 'date', name: 'date'},
             {data: 'detail', name: 'detail'},
             {data: 'amount', name: 'amount'},
+            {data: 'type', name: 'type'},
             {data: 'evidence_link', name: 'evidence_link'},
             {data: 'actions', name: 'actions', orderable: false, searchable: false}
         ]
@@ -200,6 +218,7 @@ function editOtherSpent(id) {
                 $('#date').val(data.date);
                 $('#detail').val(data.detail);
                 $('#amount').val(data.amount);
+                $('#type').val(data.type);
                 $('#evidence_link').val(data.evidence_link);
                 $('#otherSpentModalLabel').text('Edit Other Spent');
                 $('#otherSpentModal').modal('show');
@@ -218,6 +237,7 @@ function showOtherSpent(id) {
                 $('#show_date').text(new Date(data.date).toLocaleDateString('id-ID'));
                 $('#show_detail').text(data.detail);
                 $('#show_amount').text('Rp ' + new Intl.NumberFormat('id-ID').format(data.amount));
+                $('#show_type').text(data.type || '-');
                 $('#show_evidence_link').attr('href', data.evidence_link).text(data.evidence_link);
                 $('#showOtherSpentModal').modal('show');
             }

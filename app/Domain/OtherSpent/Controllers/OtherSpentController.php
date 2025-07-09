@@ -54,6 +54,9 @@ class OtherSpentController extends Controller
             ->editColumn('amount', function ($otherSpent) {
                 return 'Rp ' . number_format($otherSpent->amount, 2, ',', '.');
             })
+            ->editColumn('type', function ($otherSpent) {
+                return $otherSpent->type ?: '-';
+            })
             ->rawColumns(['actions'])
             ->make(true);
     }

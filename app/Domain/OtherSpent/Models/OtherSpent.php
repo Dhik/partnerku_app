@@ -12,7 +12,8 @@ class OtherSpent extends Model
         'date',
         'detail',
         'amount',
-        'evidence_link'
+        'evidence_link',
+        'type'
     ];
 
     protected $casts = [

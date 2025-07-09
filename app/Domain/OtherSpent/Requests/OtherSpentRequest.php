@@ -27,7 +27,8 @@ class OtherSpentRequest extends FormRequest
             'date' => 'required|date',
             'detail' => 'required|string',
             'amount' => 'required|numeric|min:0',
-            'evidence_link' => 'required|string|max:255'
+            'evidence_link' => 'required|string|max:255',
+            'type' => 'nullable|string|in:Sales Marketing,Utilities,Admin and General,Learning and Development,THR,Other'
         ];
     }
 
@@ -46,7 +47,8 @@ class OtherSpentRequest extends FormRequest
             'amount.numeric' => 'Amount must be a number',
             'amount.min' => 'Amount must be at least 0',
             'evidence_link.required' => 'Evidence link is required',
-            'evidence_link.max' => 'Evidence link must not exceed 255 characters'
+            'evidence_link.max' => 'Evidence link must not exceed 255 characters',
+            'type.in' => 'Type must be one of: Sales Marketing, Utilities, Admin and General, Learning and Development, THR, Other'
         ];
     }
 }
