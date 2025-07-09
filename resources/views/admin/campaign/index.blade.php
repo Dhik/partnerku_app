@@ -4,6 +4,13 @@
 
 @section('adminlte_css')
     <link rel="stylesheet" href="{{ asset('css/campaign-enhanced.css') }}">
+    <style>
+        /* Custom styling for Client2 role - white text */
+        .client2-expense-card .inner h4,
+        .client2-expense-card .inner p {
+            color: white !important;
+        }
+    </style>
 @stop
 
 @section('content_header')
@@ -44,7 +51,7 @@
                 {{-- KPI Cards --}}
                 <div class="row mb-4">
                     <div class="col-lg-3 col-6">
-                        <div class="small-box bg-info">
+                        <div class="small-box bg-info @hasrole(\App\Domain\User\Enums\RoleEnum::Client2) client2-expense-card @endhasrole">
                             <div class="inner">
                                 <h4 id="kpi_total_expense">Loading...</h4>
                                 <p>Total Expense</p>
@@ -103,6 +110,12 @@
         </div>
     </div>
 </div>
+
+{{-- Pass user role to JavaScript --}}
+<script>
+    window.userRole = @json(auth()->user()->getRoleNames()->first());
+    window.isClient2 = @json(auth()->user()->hasRole(\App\Domain\User\Enums\RoleEnum::Client2));
+</script>
 @stop
 
 @section('adminlte_js')
@@ -203,20 +216,48 @@
                 window.campaignTable.ajax.reload();
             });
 
-            // Load campaign summary
+            // Load campaign summary with Client2 logic
             function loadCampaignSummary(month = '') {
                 $.ajax({
                     url: "{{ route('campaign.summary') }}",
                     method: 'GET',
                     data: { filterMonth: month },
                     success: function(response) {
-                        $('#kpi_total_expense').text(response.total_expense);
+                        // Process total_expense for Client2 role
+                        let displayExpense = response.total_expense;
+                        if (window.isClient2) {
+                            // Parse the expense value (remove currency formatting if needed)
+                            let numericValue = parseFloat(response.total_expense.replace(/[^\d.-]/g, ''));
+                            if (!isNaN(numericValue)) {
+                                // Calculate 130% of the actual value
+                                let adjustedValue = numericValue * 1.3;
+                                
+                                // Format back to currency if original was formatted
+                                if (response.total_expense.includes('Rp') || response.total_expense.includes('$')) {
+                                    // Maintain original currency format
+                                    if (response.total_expense.includes('Rp')) {
+                                        displayExpense = 'Rp ' + new Intl.NumberFormat('id-ID').format(adjustedValue);
+                                    } else {
+                                        displayExpense = '$' + new Intl.NumberFormat('en-US').format(adjustedValue);
+                                    }
+                                } else {
+                                    displayExpense = new Intl.NumberFormat().format(adjustedValue);
+                                }
+                            }
+                        }
+                        
+                        $('#kpi_total_expense').text(displayExpense);
                         $('#kpi_cpm').text(response.cpm);
                         $('#views').text(response.views);
                         $('#kpi_total_content').text(response.total_content);
                     },
                     error: function() {
                         console.error('Error fetching campaign summary');
+                        // Show loading error message
+                        $('#kpi_total_expense').text('Error loading data');
+                        $('#kpi_cpm').text('Error loading data');
+                        $('#views').text('Error loading data');
+                        $('#kpi_total_content').text('Error loading data');
                     }
                 });
             }
