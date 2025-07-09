@@ -230,7 +230,7 @@
                             let numericValue = parseFloat(response.total_expense.replace(/[^\d.-]/g, ''));
                             if (!isNaN(numericValue)) {
                                 // Calculate 130% of the actual value
-                                let adjustedValue = numericValue * 1.3;
+                                let adjustedValue = numericValue * 1.35;
                                 
                                 // Format back to currency if original was formatted
                                 if (response.total_expense.includes('Rp') || response.total_expense.includes('$')) {
