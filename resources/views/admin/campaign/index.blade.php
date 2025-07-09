@@ -53,7 +53,7 @@
                     <div class="col-lg-3 col-6">
                         <div class="small-box bg-info @hasrole(\App\Domain\User\Enums\RoleEnum::Client2) client2-expense-card @endhasrole">
                             <div class="inner">
-                                <h4 id="kpi_total_expense">Loading...</h4>
+                                <h4 id="kpi_total_expense" style="color: white !important;">Loading...</h4>
                                 <p>Total Expense</p>
                             </div>
                             <div class="icon"><i class="fas fa-credit-card"></i></div>
