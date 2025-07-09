@@ -189,6 +189,9 @@ $(document).ready(function() {
     });
 
     // Update Content
+    // SIMPLE FIX: Just replace this part in your campaign-enhanced.js
+
+    // Update Content - SIMPLE VERSION
     $(document).on('click', '.btnUpdateContent', function(e) {
         e.preventDefault();
         let $row = $(this).closest('tr');
@@ -197,18 +200,19 @@ $(document).ready(function() {
         const rowData = window.contentTable ? TableManager.getRowData(window.contentTable, this) : null;
         if (!rowData) return;
 
-        ModalManager.show('#contentUpdateModal', {
-            contentId: rowData.id,
-            usernameUpdate: rowData.username,
-            taskNameUpdate: rowData.task,
-            rateCardUpdate: rowData.rate_card,
-            platformUpdate: rowData.channel,
-            linkUpdate: rowData.link,
-            productUpdate: rowData.product,
-            viewsUpdate: rowData.view,
-            likesUpdate: rowData.like,
-            commentsUpdate: rowData.comment
-        });
+        // Set the values directly to the form fields
+        $('#contentId').val(rowData.id);
+        $('#usernameUpdate').val(rowData.username);
+        $('#taskNameUpdate').val(rowData.task);
+        $('#platformUpdate').val(rowData.channel); // This is the key fix
+        $('#linkUpdate').val(rowData.link);
+        $('#productUpdate').val(rowData.product);
+        $('#viewsUpdate').val(rowData.view);
+        $('#likesUpdate').val(rowData.like);
+        $('#commentsUpdate').val(rowData.comment);
+        
+        // Show the modal
+        $('#contentUpdateModal').modal('show');
     });
 
     // Show Detail Modal
@@ -279,54 +283,94 @@ $(document).ready(function() {
     });
 
     // Update Form Submit
-    $('#contentUpdateForm').on('submit', function(e) {
-        e.preventDefault();
-        const form = $(this);
-        const contentId = $('#contentId').val();
-        const submitBtn = form.find('button[type="submit"]');
-        
-        if (!contentId) {
-            CampaignUtils.showToast('Content ID is missing', 'error');
-            return;
-        }
-        
-        // Build update URL
-        let updateUrl;
-        if (typeof window.campaignContentUpdateUrl !== 'undefined') {
-            updateUrl = window.campaignContentUpdateUrl.replace(':campaignContentId', contentId);
-        } else {
-            CampaignUtils.showToast('Update URL is not configured', 'error');
-            console.error('window.campaignContentUpdateUrl is not defined');
-            return;
-        }
-        
-        ModalManager.clearErrors('#contentUpdateModal');
-        CampaignUtils.setButtonLoading(submitBtn, true);
-        
-        $.ajax({
-            type: 'PUT',
-            url: updateUrl,
-            data: new FormData(form[0]),
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (window.contentTable) TableManager.reload(window.contentTable);
-                ModalManager.hide('#contentUpdateModal');
-                CampaignUtils.showToast('Content updated successfully!');
-            },
-            error: function(xhr) {
-                if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
-                    ModalManager.showErrors('#contentUpdateModal', xhr.responseJSON.errors);
-                } else {
-                    const message = CampaignUtils.handleError(xhr, 'Error updating content');
-                    CampaignUtils.showToast(message, 'error');
-                }
-            },
-            complete: function() {
-                CampaignUtils.setButtonLoading(submitBtn, false);
+    // REPLACE your existing contentUpdateForm submit handler with this:
+
+$('#contentUpdateForm').on('submit', function(e) {
+    e.preventDefault();
+    const form = $(this);
+    const contentId = $('#contentId').val();
+    const submitBtn = form.find('button[type="submit"]');
+    
+    if (!contentId) {
+        CampaignUtils.showToast('Content ID is missing', 'error');
+        return;
+    }
+    
+    // BUILD FORM DATA MANUALLY to ensure channel is included
+    const formData = new FormData();
+    
+    // Add CSRF token
+    formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
+    formData.append('_method', 'PUT');
+    
+    // Add all form fields explicitly
+    formData.append('task_name', $('#taskNameUpdate').val() || '');
+    formData.append('channel', $('#platformUpdate').val() || ''); // KEY FIX: explicitly add channel
+    formData.append('link', $('#linkUpdate').val() || '');
+    formData.append('product', $('#productUpdate').val() || '');
+    formData.append('views', $('#viewsUpdate').val() || '0');
+    formData.append('likes', $('#likesUpdate').val() || '0');
+    formData.append('comments', $('#commentsUpdate').val() || '0');
+    
+    // DEBUG: Log what we're sending
+    console.log('=== MANUAL FORMDATA ===');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+    
+    // Validate required fields
+    if (!formData.get('channel')) {
+        CampaignUtils.showToast('Platform/Channel is required', 'error');
+        return;
+    }
+    
+    if (!formData.get('task_name')) {
+        CampaignUtils.showToast('Task is required', 'error');
+        return;
+    }
+    
+    if (!formData.get('product')) {
+        CampaignUtils.showToast('Product is required', 'error');
+        return;
+    }
+    
+    // Build update URL
+    let updateUrl;
+    if (typeof window.campaignContentUpdateUrl !== 'undefined') {
+        updateUrl = window.campaignContentUpdateUrl.replace(':campaignContentId', contentId);
+    } else {
+        CampaignUtils.showToast('Update URL is not configured', 'error');
+        return;
+    }
+    
+    ModalManager.clearErrors('#contentUpdateModal');
+    CampaignUtils.setButtonLoading(submitBtn, true);
+    
+    $.ajax({
+        type: 'PUT',
+        url: updateUrl,
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (window.contentTable) TableManager.reload(window.contentTable);
+            ModalManager.hide('#contentUpdateModal');
+            CampaignUtils.showToast('Content updated successfully!');
+        },
+        error: function(xhr) {
+            console.error('Update error:', xhr.responseJSON);
+            if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                ModalManager.showErrors('#contentUpdateModal', xhr.responseJSON.errors);
+            } else {
+                const message = CampaignUtils.handleError(xhr, 'Error updating content');
+                CampaignUtils.showToast(message, 'error');
             }
-        });
+        },
+        complete: function() {
+            CampaignUtils.setButtonLoading(submitBtn, false);
+        }
     });
+});
 
     // ===== ACTION BUTTONS =====
     

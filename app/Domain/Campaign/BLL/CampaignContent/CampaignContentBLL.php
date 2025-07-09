@@ -164,7 +164,7 @@ class CampaignContentBLL implements CampaignContentBLLInterface
                 'task_name' => $request->input('task_name'),
                 'link' => $request->input('link'),
                 'product' => $request->input('product'),
-                'channel' => $request->input('channel'),
+                'channel' => 'tiktok_video',
                 'boost_code' => $request->input('boost_code'),
                 'kode_ads' => $request->input('kode_ads'),
             ];
