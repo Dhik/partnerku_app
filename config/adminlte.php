@@ -347,14 +347,14 @@ return [
         ],
         [
             'text' => 'Campaign Management',
-            'can' => [PermissionEnum::CreateKOL],
+            'can' => [PermissionEnum::ViewKOL],
             'icon' => 'fas fa-fw fa-bullhorn',
             'submenu' => [
                 [
                     'text' => 'Campaigns',
                     'url' => 'admin/campaign',
                     'icon' => 'nav-icon far fa-circle',
-                    'can' => [PermissionEnum::CreateKOL],
+                    'can' => [PermissionEnum::ViewKOL],
                     'active' => ['admin/campaign*']
                 ],
                 [
@@ -362,7 +362,6 @@ return [
                     'url' => 'admin/kol',
                     'icon' => 'nav-icon far fa-circle',
                     'can' => [
-                        PermissionEnum::ViewKOL,
                         PermissionEnum::CreateKOL
                     ],
                     'active' => ['admin/kol', 'admin/kol/create*', 'admin/kol/edit*', 'admin/kol/show*', 'admin/kol/get*']
