@@ -331,12 +331,12 @@ return [
                     'icon' => 'nav-icon far fa-circle text-info',
                     'can' => [PermissionEnum::ViewOtherSpent],
                 ],
-                // [
-                //     'text' => 'Cashflow Advice',
-                //     'url' => 'admin/other_spent',
-                //     'icon' => 'nav-icon far fa-circle text-info',
-                //     'can' => [PermissionEnum::ViewOtherSpent],
-                // ],
+                [
+                    'text' => 'Cashflow Advice',
+                    'url' => 'admin/cashflow',
+                    'icon' => 'nav-icon far fa-circle text-info',
+                    'can' => [PermissionEnum::ViewOtherSpent],
+                ],
             ]
         ],
         [

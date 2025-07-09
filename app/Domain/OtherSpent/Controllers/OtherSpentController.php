@@ -5,8 +5,10 @@ namespace App\Domain\OtherSpent\Controllers;
 use App\Http\Controllers\Controller;
 use App\Domain\OtherSpent\BLL\OtherSpent\OtherSpentBLLInterface;
 use App\Domain\OtherSpent\Models\OtherSpent;
+use App\Domain\Income\Models\Income;
 use App\Domain\OtherSpent\Requests\OtherSpentRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\DataTables;
 use Carbon\Carbon;
 
@@ -144,6 +146,104 @@ class OtherSpentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error deleting other spent: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    /**
+     * Display cashflow advice page
+     */
+    public function calculations()
+    {
+        return view('admin.other_spent.calculations');
+    }
+
+    /**
+     * Get cashflow calculations data
+     */
+    public function calculationsData(Request $request)
+    {
+        try {
+            $month = $request->get('month', Carbon::now()->format('Y-m'));
+            $startDate = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+            $endDate = Carbon::createFromFormat('Y-m', $month)->endOfMonth();
+
+            // Get total revenue for the month
+            $totalRevenue = Income::whereNotNull('date')
+                ->whereBetween('date', [$startDate, $endDate])
+                ->sum('revenue_contract');
+
+            // Recommendation percentages
+            $recommendations = [
+                'Sales Marketing' => 12,
+                'Payroll' => 17,
+                'Utilities' => 1.5,
+                'Admin and General' => 2,
+                'Learning and Development' => 1.25,
+                'THR' => 1.25,
+                'Other' => 5
+            ];
+
+            // Calculate recommended amounts
+            $recommendedAmounts = [];
+            $totalRecommended = 0;
+            foreach ($recommendations as $type => $percentage) {
+                $amount = ($totalRevenue * $percentage) / 100;
+                $recommendedAmounts[$type] = $amount;
+                $totalRecommended += $amount;
+            }
+
+            // Get actual spending by type for the month
+            $actualSpending = OtherSpent::whereBetween('date', [$startDate, $endDate])
+                ->select('type', DB::raw('SUM(amount) as total_amount'))
+                ->groupBy('type')
+                ->pluck('total_amount', 'type')
+                ->toArray();
+
+            // Calculate total actual spending
+            $totalActualSpending = array_sum($actualSpending);
+
+            // Combine data for response
+            $expenseData = [];
+            foreach ($recommendations as $type => $percentage) {
+                $recommended = $recommendedAmounts[$type];
+                $actual = $actualSpending[$type] ?? 0;
+                
+                // Determine status color
+                $status = 'on-target'; // green
+                if ($actual < $recommended) {
+                    $status = 'under-budget'; // blue
+                } elseif ($actual > $recommended) {
+                    $status = 'over-budget'; // red
+                }
+
+                $expenseData[] = [
+                    'type' => $type,
+                    'percentage' => $percentage,
+                    'recommended' => $recommended,
+                    'actual' => $actual,
+                    'status' => $status,
+                    'difference' => $actual - $recommended,
+                    'percentage_used' => $recommended > 0 ? ($actual / $recommended) * 100 : 0
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'month' => $month,
+                    'monthName' => $startDate->format('F Y'),
+                    'totalRevenue' => $totalRevenue,
+                    'totalRecommended' => $totalRecommended,
+                    'totalActualSpending' => $totalActualSpending,
+                    'totalDifference' => $totalActualSpending - $totalRecommended,
+                    'expenseData' => $expenseData,
+                    'budgetUtilization' => $totalRecommended > 0 ? ($totalActualSpending / $totalRecommended) * 100 : 0
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading calculations: ' . $e->getMessage()
             ], 500);
         }
     }

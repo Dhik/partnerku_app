@@ -21,5 +21,14 @@ Route::prefix('admin')
                     Route::get('/{otherSpent}/edit', [OtherSpentController::class, 'edit'])->name('otherSpent.edit');
                     Route::put('/{otherSpent}', [OtherSpentController::class, 'update'])->name('otherSpent.update');
                     Route::delete('/{otherSpent}', [OtherSpentController::class, 'destroy'])->name('otherSpent.destroy');
+
+                    Route::get('/calculations', [OtherSpentController::class, 'calculations'])->name('otherSpent.calculations');
+                    Route::get('/calculations/data', [OtherSpentController::class, 'calculationsData'])->name('otherSpent.calculationsData');
+                });
+
+            Route::prefix('cashflow')
+                ->group(function () {
+                    Route::get('/', [OtherSpentController::class, 'calculations'])->name('otherSpent.calculations');
+                    Route::get('/data', [OtherSpentController::class, 'calculationsData'])->name('otherSpent.calculationsData');
                 });
 });
